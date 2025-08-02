@@ -1,0 +1,19 @@
+# Работа с базой данных (SQLite)
+SQLAlchemy
+
+# боты
+aiogram
+maxapi
+
+# Работа с датами и форматами
+python-dateutil
+
+# Управление переменными окружения (.env)
+python-dotenv
+
+# (опционально) Типизация
+typing-extensions
+
+# API
+fastapi
+uvicorn
