@@ -1,11 +1,12 @@
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import relationship, sessionmaker, declarative_base
 import datetime
 
 DATABASE_URL = "sqlite:///./database.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
 
 class Employee(Base):
     __tablename__ = "employees"
@@ -27,6 +28,19 @@ class Project(Base):
     completed_date = Column(Date, nullable=True)
     status = Column(String, default="в работе")  # в работе / завершен / просрочено
 
+    stages = relationship("ProjectStage", back_populates="project", cascade="all, delete-orphan")
+    tasks = relationship("Task", back_populates="project")
+
+
+class ProjectStage(Base):
+    __tablename__ = "project_stages"
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+
+    project = relationship("Project", back_populates="stages")
+    tasks = relationship("Task", back_populates="stage")
+
 
 class Task(Base):
     __tablename__ = "tasks"
@@ -37,5 +51,10 @@ class Task(Base):
     completed_date = Column(Date, nullable=True)
     difficulty = Column(Integer, nullable=False)  # 1 - легко, 2 - средне, 4 - сложно
     status = Column(String, default="в работе")  # в работе / выполнено / просрочено
-    executor_ids = Column(String, nullable=False)  # CSV
+    executor_ids = Column(String, nullable=False)  # CSV строка с id сотрудников
+
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
+    stage_id = Column(Integer, ForeignKey("project_stages.id"), nullable=True)
+
+    project = relationship("Project", back_populates="tasks")
+    stage = relationship("ProjectStage", back_populates="tasks")

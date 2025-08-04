@@ -5,7 +5,7 @@ from datetime import date
 from typing import Optional, List
 
 from TaskBase.models import Employee
-from TaskBase.logic import add_employee, get_employee_score, get_all_employees
+from TaskBase.logic import *
 from api.dependencies import get_db
 
 router = APIRouter(prefix="/employees", tags=["Employees"])
@@ -23,6 +23,30 @@ class EmployeeUpdate(BaseModel):
     vacation_end: Optional[date] = None
     fired_date: Optional[date] = None
 
+@router.get("/")
+def list_employees(db: Session = Depends(get_db)):
+    employees = get_all_employees(db)
+    return [{"id": e.id, "name": e.name} for e in employees]
+
+@router.get("/top/{count}")
+def top_employees(from_date: date, to_date: date, count: int = 3, db: Session = Depends(get_db)):
+    top = get_top_employees(db, from_date, to_date, top_n=count)
+    return [{"employee_id": e["employee"].id, "name": e["employee"].name, "score": e["score"]} for e in top]
+
+@router.get("/search")
+def search_employees(query: str, db: Session = Depends(get_db)):
+    results = db.query(Employee).filter(Employee.name.ilike(f"%{query}%")).all()
+    return [{"id": e.id, "name": e.name, "position": e.position} for e in results]
+
+@router.get("/{employee_id}")
+def get_employee_by_ID(employee_id: int, db: Session = Depends(get_db)):
+    return get_employee(db, employee_id)
+
+@router.get("/{employee_id}/score")
+def employee_score(employee_id: int, from_date: date, to_date: date, db: Session = Depends(get_db)):
+    score = get_employee_score(db, employee_id, from_date, to_date)
+    return {"employee_id": employee_id, "score": score}
+
 @router.post("/")
 def create_employee(data: EmployeeCreate, db: Session = Depends(get_db)):
     employee = add_employee(db, data.name, data.position, data.date_started)
@@ -37,18 +61,3 @@ def update_employee(employee_id: int, data: EmployeeUpdate, db: Session = Depend
         setattr(emp, field, value)
     db.commit()
     return {"status": "updated"}
-
-@router.get("/")
-def list_employees(db: Session = Depends(get_db)):
-    employees = get_all_employees(db)
-    return [{"id": e.id, "name": e.name} for e in employees]
-
-@router.get("/{employee_id}/score")
-def employee_score(employee_id: int, from_date: date, to_date: date, db: Session = Depends(get_db)):
-    score = get_employee_score(db, employee_id, from_date, to_date)
-    return {"employee_id": employee_id, "score": score}
-
-@router.get("/search")
-def search_employees(query: str, db: Session = Depends(get_db)):
-    results = db.query(Employee).filter(Employee.name.ilike(f"%{query}%")).all()
-    return [{"id": e.id, "name": e.name, "position": e.position} for e in results]

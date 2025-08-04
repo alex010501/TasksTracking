@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from datetime import date
 from typing import Optional, List
 
-from TaskBase.logic import add_project, get_project_score
+from TaskBase.logic import *
 from TaskBase.models import Project
 from api.dependencies import get_db
 
@@ -18,6 +18,23 @@ class ProjectUpdate(BaseModel):
     name: Optional[str] = None
     deadline: Optional[date] = None
     status: Optional[str] = None
+
+@router.get("/")
+def projects_in_period(from_date: date, to_date: date, db: Session = Depends(get_db)):
+    projects = get_projects_in_period(db, from_date, to_date)
+    return [{"id": p.id, "name": p.name, "status": p.status} for p in projects]
+
+@router.get("/{project_id}/score")
+def project_score(project_id: int, from_date: date, to_date: date, db: Session = Depends(get_db)):
+    score = get_project_score(db, project_id, from_date, to_date)
+    return {"project_id": project_id, "score": score}
+
+@router.get("/search")
+def search_projects(query: str, db: Session = Depends(get_db)):
+    results = db.query(Project).filter(Project.name.ilike(f"%{query}%")).all()
+    return [{"id": p.id, "name": p.name, "status": p.status} for p in results]
+
+@router.get("/${project_id}")
 
 @router.post("/")
 def create_project(data: ProjectCreate, db: Session = Depends(get_db)):
@@ -33,13 +50,3 @@ def update_project(project_id: int, data: ProjectUpdate, db: Session = Depends(g
         setattr(project, field, value)
     db.commit()
     return {"status": "updated"}
-
-@router.get("/{project_id}/score")
-def project_score(project_id: int, from_date: date, to_date: date, db: Session = Depends(get_db)):
-    score = get_project_score(db, project_id, from_date, to_date)
-    return {"project_id": project_id, "score": score}
-
-@router.get("/search")
-def search_projects(query: str, db: Session = Depends(get_db)):
-    results = db.query(Project).filter(Project.name.ilike(f"%{query}%")).all()
-    return [{"id": p.id, "name": p.name, "status": p.status} for p in results]

@@ -1,8 +1,9 @@
 import React from "react";
-import { getScoreColor } from "../utils";
+import { getScoreColor} from "../utils";
+import type { ScoreRef } from "../utils";
 
-export const ScoreBadge = ({ value }: { value: number }) => {
-  const color = getScoreColor(value, 15, 30);
+export const ScoreBadge: React.FC<ScoreRef> = ({value, refValue}) => {
+  const color = getScoreColor(value, refValue);
 
   return (
     <span

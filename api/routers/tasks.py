@@ -5,7 +5,7 @@ from datetime import date
 from typing import List, Optional
 
 from TaskBase.models import Task
-from TaskBase.logic import add_task, calculate_task_score
+from TaskBase.logic import *
 from api.dependencies import get_db
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
@@ -24,6 +24,24 @@ class TaskUpdate(BaseModel):
     status: Optional[str] = None
     completed_date: Optional[date] = None
     executor_ids: Optional[List[int]] = None
+
+@router.get("/")
+def tasks_in_period(from_date: date, to_date: date, db: Session = Depends(get_db)):
+    tasks = get_tasks_in_period(db, from_date, to_date)
+    return [{"id": t.id, "name": t.name, "status": t.status} for t in tasks]
+
+@router.get("/{task_id}/score")
+def task_score(task_id: int, db: Session = Depends(get_db)):
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    score = calculate_task_score(task)
+    return {"task_id": task_id, "score": score}
+
+@router.get("/search")
+def search_tasks(query: str, db: Session = Depends(get_db)):
+    results = db.query(Task).filter(Task.name.ilike(f"%{query}%")).all()
+    return [{"id": t.id, "name": t.name, "status": t.status} for t in results]
 
 @router.post("/")
 def create_task(data: TaskCreate, db: Session = Depends(get_db)):
@@ -46,16 +64,3 @@ def update_task(task_id: int, data: TaskUpdate, db: Session = Depends(get_db)):
         setattr(task, field, value)
     db.commit()
     return {"status": "updated"}
-
-@router.get("/{task_id}/score")
-def task_score(task_id: int, db: Session = Depends(get_db)):
-    task = db.query(Task).filter(Task.id == task_id).first()
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    score = calculate_task_score(task)
-    return {"task_id": task_id, "score": score}
-
-@router.get("/search")
-def search_tasks(query: str, db: Session = Depends(get_db)):
-    results = db.query(Task).filter(Task.name.ilike(f"%{query}%")).all()
-    return [{"id": t.id, "name": t.name, "status": t.status} for t in results]

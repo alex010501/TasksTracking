@@ -27,6 +27,12 @@ export default function NavBar() {
         >
           Проекты
         </NavLink>
+        <NavLink
+          to="/tasks"
+          className={({ isActive }) => "tab" + (isActive ? " active" : "")}
+        >
+          Задачи
+        </NavLink>
       </div>
     </nav>
   );

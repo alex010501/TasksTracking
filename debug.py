@@ -4,8 +4,7 @@ from datetime import date
 
 db = SessionLocal()
 
-# add_employee(db, "Мазурин Александр Алексеевич", "Инженер-робототехник", date(2025, 4, 9))
-# print("Сотрудник добавлен")
+add_employee(db, "Сайбель Тимофей Александрович", "Разработчик", date(2025, 3, 24))
 
 # Проверим всех
 for emp in db.query(Employee).all():

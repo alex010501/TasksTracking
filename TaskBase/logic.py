@@ -1,48 +1,38 @@
 from datetime import datetime, date
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from TaskBase.models import Base, Employee, Task, Project
+from TaskBase.models import *
 import math
 
 engine = create_engine("sqlite:///database.db", echo=False)
 Session = sessionmaker(bind=engine)
 
+# Employee functions
+def add_employee(session, name: str, position: str, start_date: date) -> Employee:
+    employee = Employee(name=name, position=position, start_date=start_date)
+    session.add(employee)
+    session.commit()
+    return employee
 
-def get_session():
-    return Session()
+def get_all_employees(session):
+    employees = session.query(Employee).order_by(Employee.name).all()
+    return employees
 
+def get_employee(session, id):
+    employee = session.query(Employee).filter(Employee.id == id).first()
+    return employee
 
-def calculate_task_score(task: Task) -> int:
-    if not task.completed_date:
-        return 0
-
-    planned_days = (task.deadline - task.created_date).days
-    actual_days = (task.completed_date - task.created_date).days
-
-    if actual_days <= planned_days:
-        return task.difficulty
-    if planned_days <= 0 or actual_days <= 0:
-        return 0
-
-    efficiency = planned_days / actual_days
-    return math.floor(task.difficulty * efficiency)
-
-
-def parse_executor_ids(task: Task) -> list[int]:
-    if not task.executor_ids:
-        return []
-    return [int(eid) for eid in task.executor_ids.split(",") if eid.strip().isdigit()]
-
-
-def get_project_score(session, project_id: int, from_date: date, to_date: date) -> int:
-    tasks = session.query(Task).filter(
-        Task.project_id == project_id,
-        Task.completed_date != None,
-        Task.completed_date >= from_date,
-        Task.completed_date <= to_date
-    ).all()
-    return sum(calculate_task_score(task) for task in tasks)
-
+def get_top_employees(session, from_date: date, to_date: date, top_n: int = 3):
+    employees = session.query(Employee).all()
+    scored = [
+        {
+            "employee": emp,
+            "score": get_employee_score(session, emp.id, from_date, to_date)
+        }
+        for emp in employees
+    ]
+    scored.sort(key=lambda x: x["score"], reverse=True)
+    return scored[:top_n]
 
 def get_employee_score(session, employee_id: int, from_date: date, to_date: date) -> int:
     tasks = session.query(Task).filter(
@@ -57,54 +47,25 @@ def get_employee_score(session, employee_id: int, from_date: date, to_date: date
             total += calculate_task_score(task)
     return total
 
-
-def get_department_score(session, from_date: date, to_date: date) -> int:
-    employees = session.query(Employee).all()
-    return sum(get_employee_score(session, emp.id, from_date, to_date) for emp in employees)
-
-
-def get_tasks_in_period(session, from_date: date, to_date: date):
-    return session.query(Task).filter(
-        Task.created_date >= from_date,
-        Task.created_date <= to_date
-    ).all()
-
-def get_projects_in_period(session, from_date: date, to_date: date):
-    return session.query(Project).filter(
-        Project.created_date >= from_date,
-        Project.created_date <= to_date
-    ).all()
-
-def get_top_employees(session, from_date: date, to_date: date, top_n: int = 3):
-    employees = session.query(Employee).all()
-    scored = [
-        {
-            "employee": emp,
-            "score": get_employee_score(session, emp.id, from_date, to_date)
-        }
-        for emp in employees
-    ]
-    scored.sort(key=lambda x: x["score"], reverse=True)
-    return scored[:top_n]
-
-def get_all_employees(session):
-    employees = session.query(Employee).order_by(Employee.name).all()
-    return employees
-
-def create_default_project_if_not_exists(session) -> int:
-    """Создает проект 'Прочие задачи', если он ещё не создан"""
-    project = session.query(Project).filter(Project.name == "Прочие задачи").first()
-    if not project:
-        project = Project(name="Прочие задачи", deadline=None)
-        session.add(project)
-        session.commit()
-    return project.id
-
-def add_employee(session, name: str, position: str, start_date: date) -> Employee:
-    employee = Employee(name=name, position=position, start_date=start_date)
-    session.add(employee)
+# Project functions
+def add_project_with_stages(session: Session, name: str, deadline: date):
+    project = Project(name=name, deadline=deadline)
+    session.add(project)
     session.commit()
-    return employee
+
+    stage_names = [
+        "Техническое задание", "Первичный концепт", "Финальный концепт",
+        "Первичная спецификация", "Цифровой двойник", "Сборка и монтаж",
+        "Разработка ПО", "Пуско-наладочные работы", "Подготовка документации",
+        "Обучение персонала и поддержка"
+    ]
+
+    for stage_name in stage_names:
+        stage = ProjectStage(name=stage_name, project_id=project.id)
+        session.add(stage)
+
+    session.commit()
+    return project
 
 
 def add_project(session, name: str, deadline: date | None = None) -> Project:
@@ -113,7 +74,35 @@ def add_project(session, name: str, deadline: date | None = None) -> Project:
     session.commit()
     return project
 
+def update_project_status(session, project_id: int, status: str = "завершен") -> None:
+    project = session.query(Project).get(project_id)
+    if not project:
+        return
+    project.status = status
+    if status == "завершен":
+        project.completed_date = datetime.today().date()
+    session.commit()
 
+def get_project(session, id):
+    project = session.query(Project).filter(Project.id == id).first()
+    return project
+
+def get_project_score(session, project_id: int, from_date: date, to_date: date) -> int:
+    tasks = session.query(Task).filter(
+        Task.project_id == project_id,
+        Task.completed_date != None,
+        Task.completed_date >= from_date,
+        Task.completed_date <= to_date
+    ).all()
+    return sum(calculate_task_score(task) for task in tasks)
+
+def get_projects_in_period(session, from_date: date, to_date: date):
+    return session.query(Project).filter(
+        Project.created_date >= from_date,
+        Project.created_date <= to_date
+    ).all()
+
+# Task functions
 def add_task(session,
              name: str,
              deadline: date,
@@ -148,15 +137,41 @@ def update_task_status(session, task_id: int, status: str = "выполнено"
         task.completed_date = datetime.today().date()
     session.commit()
 
-def update_project_status(session, project_id: int, status: str = "завершен") -> None:
-    project = session.query(Project).get(project_id)
-    if not project:
-        return
-    project.status = status
-    if status == "завершен":
-        project.completed_date = datetime.today().date()
-    session.commit()
-    
+def calculate_task_score(task: Task) -> int:
+    if not task.completed_date:
+        return 0
+
+    planned_days = (task.deadline - task.created_date).days
+    actual_days = (task.completed_date - task.created_date).days
+
+    if actual_days <= planned_days:
+        return task.difficulty
+    if planned_days <= 0 or actual_days <= 0:
+        return 0
+
+    efficiency = planned_days / actual_days
+    return math.floor(task.difficulty * efficiency)
+
+def get_tasks_in_period(session, from_date: date, to_date: date):
+    return session.query(Task).filter(
+        Task.created_date >= from_date,
+        Task.created_date <= to_date
+    ).all()
+
+def parse_executor_ids(task: Task) -> list[int]:
+    if not task.executor_ids:
+        return []
+    return [int(eid) for eid in task.executor_ids.split(",") if eid.strip().isdigit()]
+
+# Statistics functions
+def get_department_score(session, from_date: date, to_date: date) -> int:
+    employees = session.query(Employee).all()
+    return sum(get_employee_score(session, emp.id, from_date, to_date) for emp in employees)
+
+# Auxiliary functions
+def get_session():
+    return Session()
+
 def check_and_update_overdue_status(session) -> None:
     today = datetime.today().date()
 
@@ -178,3 +193,12 @@ def check_and_update_overdue_status(session) -> None:
         proj.status = "просрочено"
 
     session.commit()
+
+def create_default_project_if_not_exists(session) -> int:
+    """Создает проект 'Прочие задачи', если он ещё не создан"""
+    project = session.query(Project).filter(Project.name == "Прочие задачи").first()
+    if not project:
+        project = Project(name="Прочие задачи", deadline=None)
+        session.add(project)
+        session.commit()
+    return project.id

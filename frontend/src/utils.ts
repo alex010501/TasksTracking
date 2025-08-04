@@ -1,5 +1,10 @@
-export function getScoreColor(score: number, norm1: number, norm2: number): string {
-  if (score <= norm1) return "red";
-  if (score <= norm2) return "orange";
-  return "green";
+export function getScoreColor(value: number, refValue: number): string {
+  if (value < (refValue/3)) return "red"
+  if (value < (2*refValue/3)) return "orange"
+  return "green"
+}
+
+export interface ScoreRef {
+  value: number  // Текущее значение
+  refValue: number  // Референсное значение
 }
