@@ -1,0 +1,41 @@
+.navbar {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #ffffff;
+  border-bottom: 4px solid #f50;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  margin-right: 40px;
+}
+
+.logo {
+  height: 40px;
+}
+
+.navbar-tabs {
+  display: flex;
+  gap: 24px;
+}
+
+.tab {
+  font-size: 1rem;
+  font-weight: bold;
+  text-decoration: none;
+  color: #000000;
+  background-color: #666;
+  padding: 8px 16px;
+  border-radius: 2px 2px 0 0;
+}
+
+.tab.active {
+  background-color: #f50;
+  color: white;
+}
+
+a:hover {
+  color: #f50;
+}

@@ -1,11 +1,33 @@
 import { NavLink } from "react-router-dom";
+import DepartmentHeader from "./DepHeader";
+import "./NavBar.css";
 
-const NavBar = () => (
-  <nav style={{ padding: "10px", backgroundColor: "#f0f0f0" }}>
-    <NavLink to="/department" style={{ marginRight: "20px" }}>📊 Технический блок</NavLink>
-    <NavLink to="/employees" style={{ marginRight: "20px" }}>👤 Сотрудники</NavLink>
-    <NavLink to="/projects">📁 Проекты и задачи</NavLink>
-  </nav>
-);
-
-export default NavBar;
+export default function NavBar() {
+  return (
+    <nav className="navbar">
+      <div className="navbar-left">
+        <img src="/logo.svg" alt="Логотип" className="logo" />
+      </div>
+      <div className="navbar-tabs">
+        <NavLink
+          to="/department"
+          className={({ isActive }) => "tab" + (isActive ? " active" : "")}
+        >
+          <DepartmentHeader/>
+        </NavLink>
+        <NavLink
+          to="/employees"
+          className={({ isActive }) => "tab" + (isActive ? " active" : "")}
+        >
+          Сотрудники
+        </NavLink>
+        <NavLink
+          to="/projects"
+          className={({ isActive }) => "tab" + (isActive ? " active" : "")}
+        >
+          Проекты
+        </NavLink>
+      </div>
+    </nav>
+  );
+}

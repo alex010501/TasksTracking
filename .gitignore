@@ -1,1 +1,5 @@
+.env
+api/__pycache__
+api/routers/__pycache__
+TaskBase/__pycache__
 TaskT_env

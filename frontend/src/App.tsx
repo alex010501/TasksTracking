@@ -1,12 +1,12 @@
-import { Route, Routes, Navigate } from "react-router-dom";
-import NavBar from "./components/NavBar"
+import NavBar from "./components/NavBar";
 import DepartmentStats from "./pages/DepartmentStats";
 import EmployeePage from "./pages/EmployeePage";
 import ProjectTasks from "./pages/ProjectsTasks";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 export default function App() {
   return (
-    <div>
+    <>
       <NavBar />
       <Routes>
         <Route path="/" element={<Navigate to="/department" />} />
@@ -14,6 +14,6 @@ export default function App() {
         <Route path="/employees" element={<EmployeePage />} />
         <Route path="/projects" element={<ProjectTasks />} />
       </Routes>
-    </div>
+    </>
   );
 }
