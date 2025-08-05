@@ -2,6 +2,7 @@ from datetime import datetime, date
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from TaskBase.models import *
+from typing import Optional, List
 import math
 
 engine = create_engine("sqlite:///database.db", echo=False)
@@ -47,6 +48,13 @@ def get_employee_score(session, employee_id: int, from_date: date, to_date: date
             total += calculate_task_score(task)
     return total
 
+def get_employee_tasks(db: Session, employee_id: int, from_date: date, to_date: date):
+    return db.query(Task).filter(
+        Task.executor_ids.like(f"%{employee_id}%"),
+        Task.created_date >= from_date,
+        Task.created_date <= to_date
+    ).all()
+
 # Project functions
 def add_project_with_stages(session: Session, name: str, deadline: date):
     project = Project(name=name, deadline=deadline)
@@ -66,7 +74,6 @@ def add_project_with_stages(session: Session, name: str, deadline: date):
 
     session.commit()
     return project
-
 
 def add_project(session, name: str, deadline: date | None = None) -> Project:
     project = Project(name=name, deadline=deadline)
@@ -101,6 +108,17 @@ def get_projects_in_period(session, from_date: date, to_date: date):
         Project.created_date >= from_date,
         Project.created_date <= to_date
     ).all()
+
+def get_project_tasks(db: Session, project_id: int):
+    return db.query(Task).filter(Task.project_id == project_id).all()
+
+def filter_projects(db: Session, query: Optional[str] = None, status: Optional[str] = None):
+    q = db.query(Project)
+    if query:
+        q = q.filter(Project.name.ilike(f"%{query}%"))
+    if status:
+        q = q.filter(Project.status == status)
+    return q.all()
 
 # Task functions
 def add_task(session,
@@ -162,6 +180,14 @@ def parse_executor_ids(task: Task) -> list[int]:
     if not task.executor_ids:
         return []
     return [int(eid) for eid in task.executor_ids.split(",") if eid.strip().isdigit()]
+
+def filter_tasks(db: Session, query: Optional[str] = None, status: Optional[str] = None):
+    q = db.query(Task)
+    if query:
+        q = q.filter(Task.name.ilike(f"%{query}%"))
+    if status:
+        q = q.filter(Task.status == status)
+    return q.all()
 
 # Statistics functions
 def get_department_score(session, from_date: date, to_date: date) -> int:

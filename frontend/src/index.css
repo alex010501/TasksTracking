@@ -1,11 +1,24 @@
+@font-face {
+  font-family: 'Century Gothic';
+  src: url('/fonts/CenturyGothic.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Century Gothic';
+  src: url('/fonts/CenturyGothic-Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+}
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Century Gothic', sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
   color-scheme: light dark;
   color: rgba(0, 0, 0, 0.87);
-  background-color: #eeeeee;
+  background-color: white;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,40 +26,38 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
 body, html {
   margin: 0;
   padding: 0;
-  height: 100vh;
-  font-family: sans-serif;
-  background-color: #eeeeee;
+  /* height: 100vh; */
+  font-family: 'Century Gothic', sans-serif;;
+  background-color: white;
 }
 
 #root {
   height: 100%;
 }
 
-input[type="date"] {
+input {
   background-color: white;
-  color: #222;
-  border: 1px solid #ccc;
+  color: black;
+  border: 1px solid #393939;
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 1rem;
-  font-family: inherit;
+  font-family: 'Century Gothic', sans-serif;
   box-shadow: none;
   appearance: none;       /* для Firefox */
   -webkit-appearance: none; /* для Chrome */
 }
 
+select, option {
+  background-color: white;
+  color: black;
+  border: 1px solid #393939;
+  font-size: 1rem;
+  font-family: 'Century Gothic', sans-serif;
+}
 
 h1 {
   font-size: 3.2em;
@@ -59,15 +70,14 @@ button {
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: bold;
-  font-family: inherit;
-  color: #000000;
-  background-color: #888;
+  font-family: 'Century Gothic', sans-serif;;
+  color: white;
+  background-color: #393939;
   cursor: pointer;
   transition: border-color 0.25s;
 }
 button:hover {
-  color: rgb(255, 128, 0);
-  border-color: rgb(255, 128, 0);
+  color: #FDE100;
 }
 button:focus,
 button:focus-visible {
@@ -76,13 +86,13 @@ button:focus-visible {
 
 @media (prefers-color-scheme: light) {
   :root {
-    color: #666;
-    background-color: #ffffff;
+    color: #393939;
+    background-color: white;
   }
   a:hover {
-    color: #747bff;
+    color: #FDE100;
   }
   button {
-    background-color: #f9f9f9;
+    background-color: white;
   }
 }

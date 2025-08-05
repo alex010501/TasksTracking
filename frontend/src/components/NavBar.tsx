@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import DepartmentHeader from "./DepHeader";
+import DepartmentHeader from "./department/DepHeader";
 import "./NavBar.css";
 
 export default function NavBar() {

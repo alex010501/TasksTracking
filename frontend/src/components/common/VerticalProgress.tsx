@@ -1,5 +1,5 @@
 import React from "react"
-import type {ScoreRef} from "../utils";
+import type {ScoreRef} from "../../utils";
 
 const VerticalProgress: React.FC<ScoreRef> = ({ value, refValue }) => {
   const percentage = Math.min(100, Math.max(0, (value / refValue) * 100))

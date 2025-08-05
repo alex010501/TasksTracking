@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { getDepartmentStats, getProjects, getProjectStats, getEmployees } from "../api";
-import { ScoreBadge } from "../components/ScoreBadge";
-import { StatusLabel } from "../components/StatusLabel";
-import DepartmentHeader from "../components/DepHeader";
-import VerticalProgress from "../components/VerticalProgress"
+import { getDepartmentStats, getProjectsByPeriod, getTopEmployees } from "../api";
+import { ScoreBadge } from "../components/common/ScoreBadge";
+import { StatusLabel } from "../components/common/StatusLabel";
+import DepartmentHeader from "../components/department/DepHeader";
+import VerticalProgress from "../components/common/VerticalProgress"
 
 export default function DepartmentStats() {
   const today = new Date()
@@ -18,14 +18,16 @@ export default function DepartmentStats() {
 
   const [start, setStart] = useState(firstDay);
   const [end, setEnd] = useState(lastDay);
+  const [topCount, setTopCount] = useState(3);
   const [score, setScore] = useState(0);
+  const [refEmpScore, setRefEmpScore] = useState(15);
   const [refscore, setRefScore] = useState(60);
   const [projectStats, setProjectStats] = useState<any[]>([]);
   const [employeeStats, setEmployeeStats] = useState<any[]>([]);
 
   useEffect(() => {
     loadStats();
-  }, [start, end]);
+  }, [start, end, topCount]);
 
   const handleCurrentMonth = () => {
     const d = new Date()
@@ -33,6 +35,7 @@ export default function DepartmentStats() {
     const m = d.getMonth()
     setStart(new Date(y, m, 2).toISOString().split("T")[0])
     setEnd(new Date(y, m + 1, 1).toISOString().split("T")[0])
+    setRefEmpScore(15)
     setRefScore(60)
   }
 
@@ -43,33 +46,30 @@ export default function DepartmentStats() {
     const qStartMonth = Math.floor(m / 3) * 3
     setStart(new Date(y, qStartMonth, 2).toISOString().split("T")[0])
     setEnd(new Date(y, qStartMonth + 3, 1).toISOString().split("T")[0])
+    setRefEmpScore(45)
     setRefScore(180)
   }
 
   async function loadStats() {
-    const {score} = await getDepartmentStats(start, end);
+    const { score } = await getDepartmentStats(start, end);
     setScore(score);
 
-    const projects = await getProjects(start, end);
-    const projData = await Promise.all(
-      projects.map(async (proj: any) => {
-        const stat = await getProjectStats(proj.id, start, end);
-        return {
-          name: proj.name,
-          status: proj.deadline && new Date(proj.deadline) < new Date() ? "Выполнен" : "В работе",
-          score: stat.efficiency,
-        };
-      })
-    );
+    const projects = await getProjectsByPeriod(start, end);
+    const projData = projects.map((proj: any) => ({
+      name: proj.name,
+      status: proj.status,
+      score: proj.efficiency ?? 0,
+    }));
     setProjectStats(projData);
 
-    // const employees = await getEmployees();
-    // const empData = employees.map((e: any) => ({
-    //   name: e.name,
-    //   score: by_employee[e.id] || 0,
-    // }));
-    // setEmployeeStats(empData.sort((a, b) => b.score - a.score));
+    const top = await getTopEmployees(start, end, topCount);
+    const empData = top.map((e: any) => ({
+      name: e.name,
+      score: e.score,
+    }));
+    setEmployeeStats(empData);
   }
+
 
   return (
     <div style={{ padding: "2rem" }}>
@@ -78,7 +78,7 @@ export default function DepartmentStats() {
       <div style={{ display: "flex", gap: "3rem" }}>
         <div style={{ flex: 0.7 }}>
           <div style={{ marginBottom: "1rem" }}>
-            С{" "}
+            С&#160;&#160;{" "}
             <input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
           </div>
           <div style={{ marginBottom: "1rem" }}>
@@ -88,7 +88,7 @@ export default function DepartmentStats() {
           <button onClick={handleCurrentMonth} className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300">
             Текущий месяц
           </button>
-          &#160;&#160;&#160;  
+          &#160;&#160;&#160;
           <button onClick={handleCurrentQuarter} className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300">
             Текущий квартал
           </button>
@@ -122,13 +122,27 @@ export default function DepartmentStats() {
 
         {/* Employees */}
         <div style={{ flex: 1 }}>
-          <h4>Лучшие работники</h4>
-          {employeeStats.map((e, i) => (
-            <div key={i} style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>{e.name}</span>
-              <ScoreBadge value={e.score} refValue={refscore} />
-            </div>
-          ))}
+          <h4>Лучшие работники &#160;&#160;&#160; 
+          <select
+            value={topCount}
+            onChange={(e) => setTopCount(Number(e.target.value))}
+            style={{ padding: "4px 8px", borderRadius: "4px" }}
+          >
+            {[3, 5, 10].map((n) => (
+              <option key={n} value={n}>
+                Топ {n}
+              </option>
+            ))}
+          </select> </h4>
+          {employeeStats.map((e, i) => {
+            const medals = ["🥇", "🥈", "🥉", "🏅", "🏅", "🏅", "🏅", "🏅", "🏅", "🏅"];
+            return (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>{medals[i] || `${i + 1}.`} {e.name}</span>
+                <ScoreBadge value={e.score} refValue={refEmpScore} />
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
