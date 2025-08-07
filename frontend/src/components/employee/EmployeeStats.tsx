@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getEmployeeScore } from "../../api";
-import { ScoreBadge } from "../common/ScoreBadge";
-import VerticalProgress from "../common/VerticalProgress";
+import { ScoreBadge } from "../stats/ScoreBadge";
+import VerticalProgress from "../stats/VerticalProgress";
 
 interface Props {
   employeeId: number;
@@ -45,7 +45,7 @@ export default function EmployeeStats({ employeeId, period }: Props) {
   return (
     <div style={{ marginTop: "1rem", display: "flex", gap: "3rem" }}>
       <div style={{ flex: 1 }}>
-        <div style={{ marginBottom: "1rem" }}>
+        <div style={{ marginBottom: "1rem", fontWeight: "bold"}}>
             С{" "}
             <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
             &#160;&#160;&#160;

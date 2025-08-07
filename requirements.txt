@@ -5,6 +5,8 @@ SQLAlchemy
 aiogram
 maxapi
 
+requests
+
 # Работа с датами и форматами
 python-dateutil
 

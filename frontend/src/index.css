@@ -51,6 +51,16 @@ input {
   -webkit-appearance: none; /* для Chrome */
 }
 
+textarea {
+  background-color: white;
+  color: black;
+  border: 1px solid #393939;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-family: 'Century Gothic', sans-serif;
+}
+
 select, option {
   background-color: white;
   color: black;
@@ -62,26 +72,6 @@ select, option {
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: bold;
-  font-family: 'Century Gothic', sans-serif;;
-  color: white;
-  background-color: #393939;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  color: #FDE100;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
 }
 
 @media (prefers-color-scheme: light) {

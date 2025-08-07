@@ -1,8 +1,26 @@
+import React, { useEffect, useState } from "react";
 import type { Employee } from "../../types";
-import "./status.css";
+import { getEmployeeById } from "../../api";
+import "../../styles/status.css";
 
-export default function EmployeeStatus({status, status_start, status_end}: Employee) {
-    if (!status) return null;
+type Props = {
+  employeeId: number;
+};
+
+export default function EmployeeStatus({ employeeId }: Props) {
+  const [employee, setEmployee] = useState<Employee | null>(null);
+
+  useEffect(() => {
+    if (!employeeId) return;
+
+    getEmployeeById(employeeId).then(setEmployee).catch(() => {
+      setEmployee(null);
+    });
+  }, [employeeId]);
+
+  if (!employee || !employee.status) return null;
+
+  const { status, status_start, status_end, position } = employee;
 
   let className = "status";
   let text = "";
@@ -28,10 +46,18 @@ export default function EmployeeStatus({status, status_start, status_end}: Emplo
       break;
   }
 
-  return <span className={className}>{text}</span>;
+  return <div style={{ marginBottom: "0.2rem", padding: "0.1rem", border: "2px solid #ddd", borderRadius: "8px" }}>
+            <p><strong>&#160;&#160;&#160;&#160;Должность:</strong> {position}</p>
+            <p><strong>&#160;&#160;&#160;&#160;Статус:</strong> <span className={className}>{text}</span></p>                
+          </div>
+  
 }
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr);
-  return date.toLocaleDateString("ru-RU", { day: "2-digit", month: "long", year: "numeric" });
+  return date.toLocaleDateString("ru-RU", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 }

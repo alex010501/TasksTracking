@@ -5,7 +5,7 @@ from datetime import date
 from typing import Optional, List
 
 from TaskBase.models import Employee, Task
-from TaskBase.logic import add_employee, get_employee_score, get_employee_tasks, get_top_employees
+from TaskBase.logic import add_employee, get_employee_score, get_employee_tasks, get_top_employees, get_employee
 from api.dependencies import get_db
 
 router = APIRouter(prefix="/employees", tags=["Employees"])
@@ -29,7 +29,7 @@ def get_employees(db: Session = Depends(get_db)):
 @router.get("/top")
 def top_employees(from_date: date, to_date: date, n: int = 3, db: Session = Depends(get_db)):
     top = get_top_employees(db, from_date, to_date, top_n=n)
-    return [{"employee_id": e["employee"].id, "name": e["employee"].name, "score": e["score"]} for e in top]
+    return top
 
 @router.get("/search")
 def search_employees(query: str, db: Session = Depends(get_db)):
@@ -39,7 +39,7 @@ def search_employees(query: str, db: Session = Depends(get_db)):
 @router.post("/")
 def create_employee(data: EmployeeCreate, db: Session = Depends(get_db)):
     employee = add_employee(db, data.name, data.position, data.date_started)
-    return {"id": employee.id, "name": employee.name}
+    return employee
 
 @router.put("/{employee_id}")
 def update_employee(employee_id: int, data: EmployeeUpdate, db: Session = Depends(get_db)):
@@ -51,10 +51,15 @@ def update_employee(employee_id: int, data: EmployeeUpdate, db: Session = Depend
     db.commit()
     return {"status": "updated"}
 
+@router.get("/{employee_id}")
+def get_emp(employee_id: int, db: Session = Depends(get_db)):
+    emp = get_employee(db, employee_id)
+    return emp
+
 @router.get("/{employee_id}/score")
 def employee_score(employee_id: int, from_date: date, to_date: date, db: Session = Depends(get_db)):
     score = get_employee_score(db, employee_id, from_date, to_date)
-    return {"employee_id": employee_id, "score": score}
+    return {"score": score}
 
 @router.get("/{employee_id}/tasks")
 def employee_tasks(employee_id: int, from_date: date, to_date: date, db: Session = Depends(get_db)):

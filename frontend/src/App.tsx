@@ -4,6 +4,9 @@ import EmployeePage from "./pages/EmployeePage";
 import Projects from "./pages/Projects";
 import Tasks from "./pages/Tasks";
 import { Routes, Route, Navigate } from "react-router-dom";
+import "./styles/buttons.css";
+import "./styles/status.css";
+import "./styles/styles.css";
 
 export default function App() {
   return (

@@ -23,6 +23,7 @@ class Project(Base):
     __tablename__ = "projects"
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
+    description = Column(String, nullable=False)
     created_date = Column(Date, default=datetime.date.today)
     deadline = Column(Date, nullable=True)
     completed_date = Column(Date, nullable=True)
@@ -46,6 +47,7 @@ class Task(Base):
     __tablename__ = "tasks"
     id = Column(Integer, primary_key=True)
     name = Column(String, nullable=False)
+    description = Column(String)
     created_date = Column(Date, default=datetime.date.today)
     deadline = Column(Date, nullable=False)
     completed_date = Column(Date, nullable=True)

@@ -8,3 +8,8 @@ export interface ScoreRef {
   value: number  // Текущее значение
   refValue: number  // Референсное значение
 }
+
+export function formatDate(iso: string): string {
+  const [year, month, day] = iso.split("-");
+  return `${day}.${month}.${year}`;
+}

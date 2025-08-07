@@ -1,0 +1,80 @@
+.page-container {
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+}
+
+.page-header {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-content {
+  display: flex;
+  gap: 2rem;
+}
+
+.page-content-60-40 {
+  display: flex;
+  gap: 2rem;
+}
+
+.page-content-60-40 > .left {
+  width: 60%;
+}
+
+.page-content-60-40 > .right {
+  width: 40%;
+}
+
+.page-content-80-20 {
+  display: flex;
+  gap: 2rem;
+}
+
+.page-content-80-20 > .left {
+  width: 80%;
+}
+
+.page-content-80-20 > .right {
+  width: 20%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+
+.filter-row input,
+.filter-row select {
+  min-width: 160px;
+}
+
+.section-divider {
+  margin: 2rem 0;
+  border-top: 1px solid #ccc;
+}
+
+.card {
+  border: 1px solid #ddd;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 4px;
+  background-color: white;
+}
+
+.buttons-right {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}

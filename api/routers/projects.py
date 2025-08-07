@@ -1,34 +1,51 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import date
-from typing import Optional, List
+from typing import Optional
 
-from TaskBase.logic import add_project, get_project_score, get_project_tasks, filter_projects, get_projects_in_period
+from TaskBase.logic import (
+    add_project_with_stages,
+    get_filtered_projects,
+    get_project_score,
+    get_project_name,
+    get_project_stages,
+    get_stage_tasks,
+)
 from TaskBase.models import Project
 from api.dependencies import get_db
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
+
 class ProjectCreate(BaseModel):
     name: str
+    description: str
     deadline: date
+
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
+    description: Optional[str] = None
+    created_date: Optional[date] = None
     deadline: Optional[date] = None
     status: Optional[str] = None
     completed_date: Optional[date] = None
 
+
 @router.get("/")
-def projects_in_period(from_date: date, to_date: date, db: Session = Depends(get_db)):
-    projects = get_projects_in_period(db, from_date, to_date)
-    return [{"id": p.id, "name": p.name, "status": p.status} for p in projects]
+def get_projects(from_date: Optional[date] = None, to_date: Optional[date] = None, query: Optional[str] = None, status: Optional[str] = None, db: Session = Depends(get_db)):
+    return get_filtered_projects(db,
+                                 from_date=from_date,
+                                 to_date=to_date,
+                                 query=query,
+                                 status=status)
+
 
 @router.post("/")
 def create_project(data: ProjectCreate, db: Session = Depends(get_db)):
-    project = add_project(db, data.name, data.deadline)
-    return {"id": project.id, "name": project.name}
+    return add_project_with_stages(db, data.name, data.description, data.deadline)
+
 
 @router.put("/{project_id}")
 def update_project(project_id: int, data: ProjectUpdate, db: Session = Depends(get_db)):
@@ -40,17 +57,22 @@ def update_project(project_id: int, data: ProjectUpdate, db: Session = Depends(g
     db.commit()
     return {"status": "updated"}
 
+
+@router.get("/{project_id}/name")
+def project_name(project_id: int, db: Session = Depends(get_db)):
+    return {"name": get_project_name(db, project_id)}
+
+
 @router.get("/{project_id}/score")
 def project_score(project_id: int, from_date: date, to_date: date, db: Session = Depends(get_db)):
-    score = get_project_score(db, project_id, from_date, to_date)
-    return {"project_id": project_id, "score": score}
+    return {"score": get_project_score(db, project_id, from_date, to_date)}
 
-@router.get("/{project_id}/tasks")
-def project_tasks(project_id: int, db: Session = Depends(get_db)):
-    tasks = get_project_tasks(db, project_id)
-    return [{"id": t.id, "name": t.name, "status": t.status} for t in tasks]
 
-@router.get("/search")
-def search_projects(query: str, status: Optional[str] = None, db: Session = Depends(get_db)):
-    projects = filter_projects(db, query=query, status=status)
-    return [{"id": p.id, "name": p.name, "status": p.status} for p in projects]
+@router.get("/{project_id}/stages")
+def api_get_project_stages(project_id: int, db: Session = Depends(get_db)):
+    return get_project_stages(db, project_id)
+
+
+@router.get("/{project_id}/{stage_id}/tasks")
+def api_get_stage_tasks(project_id: int, stage_id: int, db: Session = Depends(get_db)):
+    return get_stage_tasks(db, project_id, stage_id)

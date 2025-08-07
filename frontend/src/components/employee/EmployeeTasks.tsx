@@ -1,108 +1,198 @@
 import { useEffect, useState } from "react";
-import { getEmployeeTasks } from "../../api";
-import { StatusLabel } from "../common/StatusLabel";
+import { getEmployeeTasks, getProjectName, getAllEmployees } from "../../api";
+import type { Task, Employee } from "../../types";
+import TaskCard from "../tasks/TaskCard";
+import EditTaskModal from "../modals/EditTaskModal";
 
-interface Props {
+type Props = {
   employeeId: number;
-  period: { from: string; to: string };
-}
+};
 
-interface Task {
-  id: number;
-  name: string;
-  description: string;
-  weight: number;
-  is_completed: boolean;
-  completion_date: string | null;
-  created_at: string;
-  project: { id: number; name: string } | null;
-}
+export default function EmployeeTasksSection({ employeeId }: Props) {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
 
-export default function EmployeeTasks({ employeeId, period }: Props) {
+  const [fromDate, setFromDate] = useState(new Date(year, month, 2).toISOString().split("T")[0]);
+  const [toDate, setToDate] = useState(new Date(year, month + 1, 1).toISOString().split("T")[0]);
+  
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [from, setFrom] = useState(period.from);
-  const [to, setTo] = useState(period.to);
+
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [projectNames, setProjectNames] = useState<Record<number, string>>({});
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const selectedTask = tasks.find((t) => t.id === selectedTaskId) || null;
+
+  const loadTasks = async () => {
+    try {
+      const fetchedTasks = await getEmployeeTasks(employeeId, fromDate, toDate);
+      if (!Array.isArray(fetchedTasks)) {
+        console.error("Некорректный формат ответа getEmployeeTasks:", fetchedTasks);
+        setTasks([]);
+        return;
+      }
+
+      const Tasks = fetchedTasks.map((task: any) => ({
+        ...task,
+        executor_ids: typeof task.executor_ids === "string"
+          ? task.executor_ids.split(",").map((id: string) => Number(id.trim()))
+          : Array.isArray(task.executor_ids)
+          ? task.executor_ids
+          : [],
+      }));
+      setTasks(Tasks);
+
+      const projectIds = [
+        ...new Set(fetchedTasks.map((t) => t.project_id).filter((id): id is number => id !== null)),
+      ];
+
+      const names: Record<number, string> = {};
+      for (const id of projectIds) {
+        if (!(id in projectNames)) {
+          const nameObj = await getProjectName(id);
+          names[id] = nameObj.name;
+        }
+      }
+
+      setProjectNames((prev) => ({ ...prev, ...names }));
+    } catch (err) {
+      console.error("Ошибка загрузки задач сотрудника:", err);
+    }
+  };
 
   useEffect(() => {
     loadTasks();
-  }, [employeeId, from, to]);
+  }, [employeeId, fromDate, toDate]);
 
-  const loadTasks = async () => {
-    const data = await getEmployeeTasks(employeeId, from, to);
-    setTasks(data);
+  useEffect(() => {
+    getAllEmployees().then(setEmployees);
+  }, []);
+
+  // const handleSelect = (taskId: number) => {
+  //   setSelectedTaskId((prev) => (prev === taskId ? null : taskId));
+  // };
+
+  // const handleEdit = (task: Task) => {
+  //   setEditingTask(task);
+  // };
+
+  // const handleTaskUpdated = () => {
+  //   setEditingTask(null);
+  //   loadTasks();
+  // };
+
+  const handleCurrentMonth = () => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    setFromDate(new Date(y, m, 2).toISOString().split("T")[0]);
+    setToDate(new Date(y, m + 1, 1).toISOString().split("T")[0]);
   };
 
-  const setCurrentWeek = () => {
+  const handleCurrentWeek = () => {
     const today = new Date();
-    const day = today.getDay(); // Sunday = 0
-    const diffToMonday = day === 0 ? -6 : 1 - day;
-
+    const dayOfWeek = today.getDay() === 0 ? 6 : today.getDay() - 1;
     const monday = new Date(today);
-    monday.setDate(today.getDate() + diffToMonday);
-    const friday = new Date(monday);
-    friday.setDate(monday.getDate() + 4);
-
-    setFrom(monday.toISOString().split("T")[0]);
-    setTo(friday.toISOString().split("T")[0]);
+    monday.setDate(today.getDate() - dayOfWeek);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    setFromDate(monday.toISOString().split("T")[0]);
+    setToDate(sunday.toISOString().split("T")[0]);
   };
 
-  const setCurrentMonth = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();
-    const start = new Date(year, month, 2);
-    const end = new Date(year, month + 1, 1); // last day of month
-
-    setFrom(start.toISOString().split("T")[0]);
-    setTo(end.toISOString().split("T")[0]);
-  };
+  const tasksWithoutProject = tasks.filter((t) => !t.project_id);
+  const tasksGroupedByProject: Record<number, Task[]> = {};
+  tasks
+    .filter((t) => t.project_id)
+    .forEach((t) => {
+      const pid = t.project_id!;
+      if (!tasksGroupedByProject[pid]) tasksGroupedByProject[pid] = [];
+      tasksGroupedByProject[pid].push(t);
+    });
 
   return (
-    <div style={{ marginTop: "0.5rem" }}>
-      <hr />
-      <h4 className="mb-2">Задачи сотрудника</h4>
-      <div className="flex items-center gap-4 mb-3">
+    <div style={{ marginTop: "2rem" }}>
+      <h3>Задачи сотрудника</h3>
+
+      <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
         <label>
           С{" "}
-          <input
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-          />
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
         </label>
-        &#160;&#160;&#160;
         <label>
           По{" "}
-          <input
-            type="date"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-          />
+          <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
         </label>
-        &#160;&#160;&#160;
-        <button
-          onClick={setCurrentWeek}
-          className="bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
-        >
+        <button onClick={handleCurrentWeek} className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300">
           Текущая неделя
         </button>
-        &#160;&#160;&#160;
-        <button
-          onClick={setCurrentMonth}
-          className="bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
-        >
+        <button onClick={handleCurrentMonth} className="bg-gray-200 px-3 py-1 rounded hover:bg-gray-300">
           Текущий месяц
         </button>
       </div>
-      <ul>
-        {tasks.map((task) => (
-          <li key={task.id} className="flex justify-between border-b py-1">
-            <span>{task.name}</span>
-            <span>{task.project?.name ?? "Без проекта"}</span>
-            <StatusLabel status={task.is_completed ? "Выполнено" : "В работе"} />
-          </li>
-        ))}
-      </ul>
+
+      {Object.entries(tasksGroupedByProject).map(([projectIdStr, taskList]) => {
+        const projectId = Number(projectIdStr);
+        const projectName = projectNames[projectId] || "Загрузка...";
+        return (
+          <div key={projectId} style={{ marginBottom: "1.5rem" }}>
+            <h5 style={{ margin: "0.5rem 0" }}>{projectName}</h5>
+            {taskList.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                employees={employees}
+                selected={selectedTaskId === task.id}
+                onSelect={() => setSelectedTaskId(selectedTaskId === task.id ? null : task.id)}
+                // onSelect={() => handleSelect(task.id)}
+                onUpdated={loadTasks}
+                onEdit={() => {
+                  setSelectedTaskId(task.id);
+                  setShowEditModal(true);
+                }}
+                // onEdit={() => handleEdit(task)}
+              />
+            ))}
+          </div>
+        );
+      })}
+
+      {tasksWithoutProject.length > 0 && (
+        <div style={{ marginTop: "2rem" }}>
+          <h4>Прочие задачи</h4>
+          {tasksWithoutProject.map((task) => (
+            <TaskCard
+                key={task.id}
+                task={task}
+                employees={employees}
+                selected={selectedTaskId === task.id}
+                onSelect={() => setSelectedTaskId(selectedTaskId === task.id ? null : task.id)}
+                // onSelect={() => handleSelect(task.id)}
+                onUpdated={loadTasks}
+                onEdit={() => {
+                  setSelectedTaskId(task.id);
+                  setShowEditModal(true);
+                }}
+                // onEdit={() => handleEdit(task)}
+              />
+            ))}
+        </div>
+      )}
+
+      {selectedTask && (
+                  <EditTaskModal
+                    isOpen={showEditModal}
+                    onClose={() => setShowEditModal(false)}
+                    task={selectedTask}
+                    onUpdated={() => {
+                      setShowEditModal(false);
+                      loadTasks();
+                    }}
+                  />
+                )}
     </div>
   );
 }

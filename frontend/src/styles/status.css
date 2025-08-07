@@ -1,0 +1,30 @@
+.status {
+  font-weight: bold;
+}
+
+/* Сотрудники */
+.status.working {
+  color: green;
+}
+
+.status.vacation {
+  color: orange;
+}
+
+.status.fired {
+  color: red;
+}
+
+/* Задачи и проекты*/
+
+.status.in-progress {
+  color: #007bff;
+}
+
+.status.completed {
+  color: green;
+}
+
+.status.overdue {
+  color: red;
+}

@@ -11,8 +11,9 @@ export interface Employee {
 export interface Project {
   id: number;
   name: string;
-  created_date: string;
-  deadline?: string | null;
+  description: string;
+  created_date?: string | null;
+  deadline: string;
   completed_date?: string | null;
   status: "в работе" | "завершен" | "просрочено";
 }
@@ -27,41 +28,23 @@ export interface ProjectStage {
 export interface Task {
   id: number;
   name: string;
+  description: string;
   created_date: string;
   deadline: string;
   completed_date?: string | null;
   difficulty: 1 | 2 | 4;
-  status: "В работе" | "Выполнено" | "Просрочено";
-  executor_ids: string; // CSV, но чаще всего преобразуется в массив
+  status: "в работе" | "выполнено" | "просрочено";
+  executor_ids: number[];
   project_id?: number | null;
   stage_id?: number | null;
 }
 
-export interface TaskWithProjectAndEmployee {
-  id: number;
-  name: string;
-  difficulty: number;
-  status: string;
-  created_date: string;
-  deadline: string;
-  completed_date: string | null;
-  executor_ids: string;
-  project: Project | null;
-  stage?: ProjectStage | null;
-}
-
-export interface EmployeeScore {
+export interface ScoredEmployee {
   employee_id: number;
   name: string;
   score: number;
 }
 
 export interface DepartmentScore {
-  score: number;
-}
-
-export interface TopEmployee {
-  employee_id: number;
-  name: string;
   score: number;
 }
