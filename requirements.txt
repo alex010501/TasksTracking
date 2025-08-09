@@ -18,4 +18,5 @@ typing-extensions
 
 # API
 fastapi
+apscheduler
 uvicorn

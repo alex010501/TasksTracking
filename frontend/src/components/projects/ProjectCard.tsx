@@ -54,6 +54,11 @@ export default function ProjectCard({
     setEmployees(employeeData);
   };
 
+  const refresh = async () => {
+    await loadData();
+    await loadScore();
+  };
+
   const handleStageToggle = (stageId: number) => {
     setOpenStageId((prev) => (prev === stageId ? null : stageId));
   };
@@ -120,7 +125,7 @@ export default function ProjectCard({
               expanded={openStageId === stage.id}
               onToggle={() => handleStageToggle(stage.id)}
               onAddTask={() => setShowAddModalForStage(stage.id)}
-              onUpdated={onUpdated}
+              onUpdated={refresh}
             />
           ))}
 
