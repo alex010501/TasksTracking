@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { getTopEmployees } from "../../api";
 import type { ScoredEmployee } from "../../types";
 import { ScoreBadge } from "./ScoreBadge";
@@ -16,7 +16,7 @@ export default function TopEmployees({ from, to, refEmpScore }: Props) {
   useEffect(() => {
     if (!from || !to) return;
     getTopEmployees(from, to, topCount).then((data) => {
-    const converted: ScoredEmployee[] = data.map((item) => ({
+    const converted: ScoredEmployee[] = data.map((item: any) => ({
         employee_id: item.employee.id,
         name: item.employee.name,
         score: item.score,

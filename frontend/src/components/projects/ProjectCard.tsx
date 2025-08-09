@@ -118,7 +118,6 @@ export default function ProjectCard({
           {stages.map((stage) => (
             <StageCard
               key={stage.id}
-              projectId={project.id}
               stage={stage}
               tasks={tasksByStage[stage.id] || []}
               employees={employees}

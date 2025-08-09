@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getDepartmentStats } from "../api";
 import DepartmentHeader from "../components/stats/DepHeader";
 import StatsSection from "../components/stats/StatsSection";

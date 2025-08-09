@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from TaskBase.models import Task
 from TaskBase.logic import add_task, calculate_task_score, filter_tasks_in_period
-from api.dependencies import get_db
+from dependencies import get_db
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
 

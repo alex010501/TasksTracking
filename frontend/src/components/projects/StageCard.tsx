@@ -3,9 +3,9 @@ import type { ProjectStage, Task, Employee } from "../../types";
 import TaskCard from "../tasks/TaskCard";
 import EditTaskModal from "../modals/EditTaskModal";
 import { getAllEmployees } from "../../api";
+import { normalizeExecutorIds } from "../../utils";
 
 type Props = {
-  projectId: number;
   stage: ProjectStage;
   tasks: Task[];
   employees?: Employee[];
@@ -16,7 +16,6 @@ type Props = {
 };
 
 export default function StageCard({
-  projectId,
   stage,
   tasks,
   employees: propEmployees = [],
@@ -44,7 +43,7 @@ export default function StageCard({
   const handleEditTask = (task: Task) => {
     const fixedExecutorIds =
       typeof task.executor_ids === "string"
-        ? task.executor_ids.split(",").map((id) => Number(id.trim()))
+        ? normalizeExecutorIds(task.executor_ids)
         : task.executor_ids;
 
     setTaskToEdit({
@@ -98,7 +97,7 @@ export default function StageCard({
               {tasks.map((task) => {
                 const fixedExecutorIds =
                   typeof task.executor_ids === "string"
-                    ? task.executor_ids.split(",").map((id) => Number(id.trim()))
+                    ? normalizeExecutorIds(task.executor_ids)
                     : task.executor_ids;
 
                 return (

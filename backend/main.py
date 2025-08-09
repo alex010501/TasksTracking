@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.concurrency import run_in_threadpool
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from api.routers import employees, projects, tasks, stats
+from routers import employees, projects, tasks, stats
 from TaskBase import init_db
 from TaskBase.logic import check_and_update_overdue_status
 

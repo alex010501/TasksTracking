@@ -13,11 +13,11 @@ export default function App() {
     <>
       <NavBar />
       <Routes>
-        <Route path="/" element={<Navigate to="/department" />} />
-        <Route path="/department" element={<DepartmentStats />} />
-        <Route path="/employees" element={<EmployeePage />} />
-        <Route path="/projects" element={<Projects />} />
-        <Route path="/tasks" element={<Tasks />} />
+        <Route path="/" element={<Navigate to="/отдел" />} />
+        <Route path="/отдел" element={<DepartmentStats />} />
+        <Route path="/сотрудники" element={<EmployeePage />} />
+        <Route path="/проекты" element={<Projects />} />
+        <Route path="/задачи" element={<Tasks />} />
       </Routes>
     </>
   );

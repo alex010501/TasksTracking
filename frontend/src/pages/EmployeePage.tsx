@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import EmployeeSelector from "../components/employee/EmployeeSelector";
 import EmployeeStatus from "../components/employee/EmployeeStatus";
 import StatsSection from "../components/stats/StatsSection";

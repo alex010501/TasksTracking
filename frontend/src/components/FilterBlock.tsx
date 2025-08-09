@@ -1,5 +1,3 @@
-import React from "react";
-
 type Props = {
   query: string;
   onQueryChange: (val: string) => void;

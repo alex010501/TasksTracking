@@ -1,0 +1,70 @@
+version: "3.9"
+
+networks:
+  web:
+    driver: bridge
+
+volumes:
+  certbot-conf:
+  certbot-www:
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: reverse-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    networks: [web]
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot-conf:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+
+  certbot:
+    image: certbot/certbot:v2.11.0
+    container_name: certbot
+    networks: [web]
+    volumes:
+      - certbot-conf:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint: sh
+    command: -c "trap exit TERM; while :; do sleep 12h & wait $${!}; certbot renew --webroot -w /var/www/certbot --quiet && nginx -s reload || true; done"
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    restart: unless-stopped
+    networks: [web]
+    depends_on: [nginx]
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: backend
+    restart: unless-stopped
+    networks: [web]
+    environment:
+      - TZ=Europe/Moscow
+      - DATABASE_URL=${DATABASE_URL:-sqlite:////app/database.db}
+    # Биндим ВАШ реальный файл БД внутрь контейнера ровно как /app/database.db
+    volumes:
+      - ../backend/database.db:/app/database.db
+    depends_on: [nginx]
+
+  bot:
+    build:
+      context: ../bot
+      dockerfile: Dockerfile
+    container_name: tg-bot
+    restart: unless-stopped
+    networks: [web]
+    environment:
+      - TZ=Europe/Moscow
+      - BOT_TOKEN=${BOT_TOKEN}
+      - API_BASE_URL=https://xn----dtbfcbabfwu3ac9c2ba.xn--p1ai/api
+    depends_on: [backend]

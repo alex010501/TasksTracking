@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { getProjects, getProjectScore } from "../../api";
 import type { Project } from "../../types";
 import { getScoreColor, formatDate } from "../../utils";

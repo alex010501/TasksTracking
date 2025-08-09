@@ -9,7 +9,19 @@ export interface ScoreRef {
   refValue: number  // Референсное значение
 }
 
-export function formatDate(iso: string): string {
-  const [year, month, day] = iso.split("-");
-  return `${day}.${month}.${year}`;
+export function formatDate(dateStr?: string | null) {
+  if (!dateStr) return "—";
+  const [y, m, d] = dateStr.split("-");
+  return `${d}.${m}.${y}`;
+}
+
+export function normalizeExecutorIds(value: number[] | string | null | undefined): number[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    return value
+      .split(",")
+      .map((id) => Number(id.trim()))
+      .filter((n) => !Number.isNaN(n));
+  }
+  return [];
 }

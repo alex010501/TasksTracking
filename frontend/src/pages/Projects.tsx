@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Project } from "../types";
-import {
-  getProjects,
-  closeProject,
-  getDepartmentName,
-} from "../api";
+import {getProjects} from "../api";
 import ProjectCard from "../components/projects/ProjectCard";
 import AddProjectModal from "../components/modals/AddProjectModal";
 import EditProjectModal from "../components/modals/EditProjectModal";
@@ -36,7 +32,6 @@ export default function ProjectsPage() {
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editProjectId, setEditProjectId] = useState<number | null>(null);
-  const [departmentName, setDepartmentName] = useState("");
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("все");
@@ -53,10 +48,6 @@ export default function ProjectsPage() {
     });
     setProjects(data);
   };
-
-  useEffect(() => {
-    getDepartmentName().then(setDepartmentName);
-  }, []);
 
   useEffect(() => {
     loadProjects();

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { updateEmployee, restoreEmployee } from "../../api";
+import { useEffect, useState } from "react";
+import { updateEmployee} from "../../api";
 import type { Employee } from "../../types";
 
 type Props = {

@@ -6,7 +6,7 @@ from typing import Optional, List
 
 from TaskBase.models import Employee, Task
 from TaskBase.logic import add_employee, get_employee_score, get_employee_tasks, get_top_employees, get_employee
-from api.dependencies import get_db
+from dependencies import get_db
 
 router = APIRouter(prefix="/employees", tags=["Employees"])
 

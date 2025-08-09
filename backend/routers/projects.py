@@ -13,7 +13,7 @@ from TaskBase.logic import (
     get_stage_tasks,
 )
 from TaskBase.models import Project
-from api.dependencies import get_db
+from dependencies import get_db
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 

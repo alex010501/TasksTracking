@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { getAllEmployees, updateTask } from "../../api";
 import type { Task, Employee } from "../../types";
 

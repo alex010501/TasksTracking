@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Task, Employee } from "../types";
-import {
-  getUnassignedTasks,
-  getAllEmployees,
-  completeTask,
-} from "../api";
+import {getUnassignedTasks, getAllEmployees} from "../api";
 import TaskCard from "../components/tasks/TaskCard";
 import AddTaskModal from "../components/modals/AddTaskModal";
 import EditTaskModal from "../components/modals/EditTaskModal";

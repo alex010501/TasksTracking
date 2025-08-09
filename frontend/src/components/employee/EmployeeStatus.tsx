@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { Employee } from "../../types";
 import { getEmployeeById } from "../../api";
 import "../../styles/status.css";

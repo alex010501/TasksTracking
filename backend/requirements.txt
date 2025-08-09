@@ -1,0 +1,7 @@
+SQLAlchemy
+python-dateutil
+python-dotenv
+typing-extensions
+fastapi
+apscheduler
+uvicorn

@@ -1,8 +1,4 @@
-.env
-api/__pycache__
-api/routers/__pycache__
-database.db
-TaskBase/__pycache__
-TaskT_env
-tg_bot/__pycache__
 api_debug.py
+database.db
+
+.env
