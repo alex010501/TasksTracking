@@ -7,7 +7,9 @@ from routers import employees, projects, tasks, stats
 from TaskBase import init_db
 from TaskBase.logic import check_and_update_overdue_status
 
-app = FastAPI(title="Task Tracking API")
+app = FastAPI(
+    title="Task Tracking API"
+)
 
 init_db()
 

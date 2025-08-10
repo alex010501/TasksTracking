@@ -19,7 +19,7 @@ from typing import Any, Mapping
 ALLOWED_STATUSES = {"в работе", "просрочено"}
 
 load_dotenv()
-BOT_TOKEN = os.getenv("TG_BOT_TOKEN", "_")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "_")
 
 bot = Bot(
     token=BOT_TOKEN,

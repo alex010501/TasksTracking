@@ -1,9 +1,10 @@
 import os
 import requests
 from datetime import date, timedelta
+from dotenv import load_dotenv
 
-API_BASE_URL = "http://127.0.0.1:8080"
-os.environ["NO_PROXY"] = "localhost,127.0.0.1"
+API_BASE_URL = os.getenv("API_BASE", "http://127.0.0.1:8080")
+# os.environ["NO_PROXY"] = "localhost,127.0.0.1"
 
 def safe_json_get(url):
     try:

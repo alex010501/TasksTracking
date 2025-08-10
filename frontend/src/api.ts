@@ -1,4 +1,4 @@
-const API_URL = "/api";
+const API_URL = import.meta.env.VITE_API_BASE || "/api";
 
 // ======= Общее =======
 export async function getDepartmentName() {
@@ -13,6 +13,7 @@ export async function getDepartmentStats(from: string, to: string) {
 
 // ======= Сотрудники =======
 export async function getAllEmployees() {
+  console.log(`${API_URL}/employees`)
   const res = await fetch(`${API_URL}/employees`);
   return res.json();
 }

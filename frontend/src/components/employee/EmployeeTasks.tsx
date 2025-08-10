@@ -21,7 +21,7 @@ export default function EmployeeTasksSection({ employeeId }: Props) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [projectNames, setProjectNames] = useState<Record<number, string>>({});
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  // const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) || null;
