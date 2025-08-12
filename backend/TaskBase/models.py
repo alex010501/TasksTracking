@@ -2,9 +2,14 @@ from sqlalchemy import Column, Integer, String, Date, ForeignKey, create_engine
 from sqlalchemy.orm import relationship, sessionmaker, declarative_base
 import datetime
 
-DATABASE_URL = "sqlite:///./database.db"
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./database.db")
+
+# Для SQLite нужен check_same_thread=False, для остальных СУБД — нет
+backend = make_url(DATABASE_URL).get_backend_name()
+connect_args = {"check_same_thread": False} if backend == "sqlite" else {}
+
+engine = create_engine(DATABASE_URL, connect_args=connect_args, future=True)
+SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 Base = declarative_base()
 
 
