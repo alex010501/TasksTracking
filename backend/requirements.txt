@@ -1,4 +1,5 @@
 SQLAlchemy
+pydantic
 python-dateutil
 python-dotenv
 typing-extensions

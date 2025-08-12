@@ -1,77 +1,55 @@
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
-from datetime import date
-from typing import List, Optional
 
-from TaskBase.models import Task
-from TaskBase.logic import add_task, calculate_task_score, filter_tasks_in_period
 from dependencies import get_db
+from TaskBase import logic
+from TaskBase.schemas import TaskCreate, TaskUpdate, TaskOut, ScoreOut
 
-router = APIRouter(prefix="/tasks", tags=["Tasks"])
+router = APIRouter(prefix="/tasks", tags=["tasks"])
 
-class TaskCreate(BaseModel):
-    name: str
-    description: str
-    difficulty: int = Field(..., ge=1, le=4)
-    deadline: date
-    executor_ids: List[int]
-    project_id: Optional[int] = None
-    stage_id: Optional[int] = None
+# --- list unassigned (для страницы "Задачи" когда showLinked=false) ---
+@router.get("/", response_model=List[dict])
+@router.get("", response_model=List[dict], include_in_schema=False)
+def search_unassigned(
+    db: Session = Depends(get_db),
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    query: Optional[str] = None,
+    status: Optional[str] = None,
+):
+    return logic.search_unassigned_tasks(db, from_date, to_date, query, status) or []
 
-class TaskUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    difficulty: Optional[int] = Field(None, ge=1, le=4)
-    created_date: Optional[date] = None
-    deadline: Optional[date] = None
-    status: Optional[str] = None
-    completed_date: Optional[date] = None
-    executor_ids: Optional[List[int]] = None
-
-@router.get("/")
-def tasks_in_period(from_date: Optional[date] = None, to_date: Optional[date] = None, query: Optional[str] = None, status: Optional[str] = None, db: Session = Depends(get_db)):
-    tasks = filter_tasks_in_period(db,
-                                   from_date=from_date,
-                                   to_date=to_date,
-                                   query=query,
-                                   status=status)
-    unlinked = [t for t in tasks if t.project_id is None]
-    return unlinked
-
-@router.post("/")
-def create_task(data: TaskCreate, db: Session = Depends(get_db)):
-    task = add_task(
+# --- create task ---
+@router.post("/", response_model=TaskOut)
+def create_task(payload: TaskCreate, db: Session = Depends(get_db)):
+    row = logic.add_task(
         db,
-        name=data.name,
-        description=data.description,
-        difficulty=data.difficulty,
-        deadline=data.deadline,
-        executor_ids=data.executor_ids,
-        project_id=data.project_id,
-        stage_id=data.stage_id
+        name=payload.name,
+        description=payload.description or "",
+        created_date=payload.created_date,  # может быть None — логика подставит today
+        deadline=payload.deadline,
+        completed_date=payload.completed_date,
+        difficulty=payload.difficulty,
+        status=payload.status,
+        executor_ids=payload.executor_ids,
+        project_id=payload.project_id,
+        stage_id=payload.stage_id,
     )
-    return {"id": task.id, "name": task.name}
+    if not row:
+        raise HTTPException(status_code=500, detail="Task not created")
+    return TaskOut.model_validate(row, from_attributes=True) if hasattr(TaskOut, "model_validate") else TaskOut.from_orm(row)
 
-@router.put("/{task_id}")
-def update_task(task_id: int, data: TaskUpdate, db: Session = Depends(get_db)):
-    task = db.query(Task).filter(Task.id == task_id).first()
-    if not task:
+# --- update task ---
+@router.put("/{task_id}", response_model=TaskOut)
+def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)):
+    row = logic.update_task(db, task_id, **payload.dict(exclude_unset=True))
+    if not row:
         raise HTTPException(status_code=404, detail="Task not found")
+    return TaskOut.model_validate(row, from_attributes=True) if hasattr(TaskOut, "model_validate") else TaskOut.from_orm(row)
 
-    for field, value in data.dict(exclude_unset=True).items():
-        # если поле executor_ids — преобразуем список в строку
-        if field == "executor_ids" and isinstance(value, list):
-            value = ",".join(str(i) for i in value)
-        setattr(task, field, value)
-
-    db.commit()
-    return {"status": "updated"}
-
-@router.get("/{task_id}/score")
+# --- score for task ---
+@router.get("/{task_id}/score", response_model=ScoreOut)
 def task_score(task_id: int, db: Session = Depends(get_db)):
-    task = db.query(Task).filter(Task.id == task_id).first()
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    score = calculate_task_score(task)
-    return {"score": score}
+    score = logic.get_task_score(db, task_id)
+    return {"score": int(score or 0)}

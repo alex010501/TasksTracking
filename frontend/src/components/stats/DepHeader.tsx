@@ -6,7 +6,7 @@ export default function DepartmentHeader() {
 
   useEffect(() => {
     getDepartmentName()
-      .then((data) => setName(data.name))
+      .then((data) => setName(data.department_name))
       .catch((err) => {
         console.error("Ошибка загрузки названия отдела:", err);
         setName("Ошибка загрузки");

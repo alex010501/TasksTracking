@@ -9,71 +9,86 @@ type Props = {
 
 export default function AddProjectModal({ isOpen, onClose, onCreated }: Props) {
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [deadline, setDeadline] = useState("");
-
-  const handleCreate = async () => {
-    if (!name.trim()) {
-      alert("Название проекта не может быть пустым.");
-      return;
-    }
-
-    if (!deadline) {
-      alert("Укажите срок проекта.");
-      return;
-    }
-
-    const today = new Date().toISOString().split("T")[0];
-    if (deadline < today) {
-      alert("Срок проекта не может быть в прошлом.");
-      return;
-    }
-
-    await createProject({ name, description, deadline });
-    onCreated();
-    onClose();
-  };
+  const [description, setDescription] = useState<string>("");
+  const [deadline, setDeadline] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
+  const canSave = name.trim().length > 0;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSave) return;
+
+    setSaving(true);
+    setError(null);
+    try {
+      // Преобразуем пустые строки в undefined (не null),
+      // т.к. api.createProject ожидает string | undefined
+      const payload = {
+        name: name.trim(),
+        description: description.trim() ? description.trim() : undefined,
+        deadline: deadline ? deadline : undefined, // YYYY-MM-DD или undefined
+      };
+      await createProject(payload);
+      onCreated();
+    } catch (err: any) {
+      setError(err?.message || "Не удалось создать проект");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <div style={{
-      position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: "rgba(0,0,0,0.5)", display: "flex",
-      justifyContent: "center", alignItems: "center", zIndex: 1000
-    }}>
-      <div style={{
-        background: "white", padding: "2rem", borderRadius: "8px",
-        width: "500px"
-      }}>
-        <h2>Создание проекта</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <div style={{ width: "140px", fontWeight: "bold" }}>Название:</div>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} style={{ flexGrow: 1 }} />
-          </div>
+    <div className="modal-overlay">
+      <div className="modal">
+        <div className="modal-header">
+          <h3>Новый проект</h3>
+        </div>
+        <form onSubmit={handleSubmit} className="modal-body" style={{ display: "grid", gap: 12 }}>
+          {error && <div style={{ color: "#c0392b" }}>{error}</div>}
 
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <div style={{ width: "140px", fontWeight: "bold" }}>Описание:</div>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} style={{ flexGrow: 1 }} />
-          </div>
+          <label style={{ display: "grid", gap: 6 }}>
+            <span>Название*</span>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              placeholder="Проект А"
+            />
+          </label>
 
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <div style={{ width: "140px", fontWeight: "bold" }}>Срок до:</div>
+          <label style={{ display: "grid", gap: 6 }}>
+            <span>Описание</span>
+            <textarea
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Короткое описание проекта"
+            />
+          </label>
+
+          <label style={{ display: "grid", gap: 6 }}>
+            <span>Дедлайн</span>
             <input
               type="date"
               value={deadline}
               onChange={(e) => setDeadline(e.target.value)}
-              style={{ flexGrow: 1 }}
-              min={new Date().toISOString().split("T")[0]}
             />
-          </div>
-        </div>
+          </label>
 
-        <div style={{ marginTop: "2rem", display: "flex", justifyContent: "space-between" }}>
-          <button className="button red" onClick={onClose}>Отмена</button>
-          <button className="button green" onClick={handleCreate}>Создать</button>
-        </div>
+          <div className="modal-footer" style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button type="button" className="button" onClick={onClose} disabled={saving}>
+              Отмена
+            </button>
+            <button type="submit" className="button green" disabled={!canSave || saving}>
+              {saving ? "Сохраняю…" : "Создать"}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

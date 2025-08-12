@@ -6,7 +6,9 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# --- runtime: nginx static ---
+# --- runtime: nginx static + /api proxy ---
 FROM nginx:1.27-alpine
+# статика
 COPY --from=build /app/dist /usr/share/nginx/html
-# Базовый nginx конфиг уже ок для статик; заголовки можно подкрутить в frontend.conf reverse-proxy.
+# конфиг nginx
+COPY nginx/conf.d/app.conf /etc/nginx/conf.d/default.conf

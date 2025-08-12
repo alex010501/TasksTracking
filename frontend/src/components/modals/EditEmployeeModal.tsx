@@ -1,6 +1,14 @@
-import { useEffect, useState } from "react";
-import { updateEmployee} from "../../api";
-import type { Employee } from "../../types";
+import { useEffect, useMemo, useState } from "react";
+import Modal from "../ui/Modal";
+import { FieldRow, TextInput, ErrorText } from "../ui/Field";
+import { updateEmployee } from "../../api";
+
+type Employee = {
+  id: number;
+  name: string;
+  position?: string | null;
+  start_date: string; // YYYY-MM-DD
+};
 
 type Props = {
   isOpen: boolean;
@@ -12,159 +20,67 @@ type Props = {
 export default function EditEmployeeModal({ isOpen, onClose, onUpdated, employee }: Props) {
   const [name, setName] = useState(employee.name);
   const [position, setPosition] = useState(employee.position || "");
-  const [startDate, setStartDate] = useState(employee.start_date);
-  const [status, setStatus] = useState(employee.status);
-  const [statusStart, setStatusStart] = useState(employee.status_start || "");
-  const [statusEnd, setStatusEnd] = useState(employee.status_end || "");
+  const [startDate, setStartDate] = useState(employee.start_date || "");
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+
+  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   useEffect(() => {
-    if (isOpen) {
-      setName(employee.name);
-      setPosition(employee.position || "");
-      setStartDate(employee.start_date);
-      setStatus(employee.status);
-      setStatusStart(employee.status_start || "");
-      setStatusEnd(employee.status_end || "");
-    }
+    if (!isOpen) return;
+    setName(employee.name || "");
+    setPosition(employee.position || "");
+    setStartDate(employee.start_date || "");
+    setError(undefined);
+    setBusy(false);
   }, [isOpen, employee]);
 
-  const handleUpdate = async () => {
-    if (!name.trim() || !position.trim() || !startDate) {
-      alert("Пожалуйста, заполните все поля.");
-      return;
+  async function handleSave() {
+    setError(undefined);
+    if (!name.trim()) return setError("Укажите ФИО.");
+    if (!position.trim()) return setError("Укажите должность.");
+    if (!startDate) return setError("Укажите дату начала работы.");
+    if (startDate > today) return setError("Дата начала не может быть в будущем.");
+
+    setBusy(true);
+    try {
+      await updateEmployee(employee.id, {
+        name: name.trim(),
+        position: position.trim(),
+        start_date: startDate, // api.ts нормализует при необходимости
+      });
+      onUpdated();
+      onClose();
+    } catch (e: any) {
+      setError(e?.message || "Не удалось сохранить изменения");
+    } finally {
+      setBusy(false);
     }
-
-    if ((status === "в отпуске" || status === "уволен") && (!statusStart || !statusEnd)) {
-      alert("Укажите даты начала и окончания статуса.");
-      return;
-    }
-
-    await updateEmployee(employee.id, {
-      name,
-      position,
-      start_date: startDate,
-      status,
-      status_start: status === "работает" ? null : statusStart,
-      status_end: status === "работает" ? null : statusEnd,
-    });
-
-    onUpdated();
-    onClose();
-  };
-
-  if (!isOpen) return null;
+  }
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0,0,0,0.5)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        zIndex: 1000,
-      }}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Редактирование сотрудника"
+      footer={
+        <button className="button green" onClick={handleSave} disabled={busy}>
+          {busy ? "Сохранение…" : "Сохранить"}
+        </button>
+      }
     >
-      <div
-        style={{
-          background: "white",
-          padding: "2rem",
-          borderRadius: "8px",
-          width: "600px",
-        }}
-      >
-        <h2>Редактирование сотрудника</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <div style={{ width: "160px", fontWeight: "bold" }}>ФИО:</div>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={{ flexGrow: 1 }}
-            />
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <div style={{ width: "160px", fontWeight: "bold" }}>Должность:</div>
-            <input
-              type="text"
-              value={position}
-              onChange={(e) => setPosition(e.target.value)}
-              style={{ flexGrow: 1 }}
-            />
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <div style={{ width: "160px", fontWeight: "bold" }}>Дата начала:</div>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              style={{ flexGrow: 1 }}
-            />
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <div style={{ width: "160px", fontWeight: "bold" }}>Статус:</div>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as Employee["status"])}
-              style={{ flexGrow: 1 }}
-            >
-              <option value="работает">работает</option>
-              <option value="в отпуске">в отпуске</option>
-              <option value="уволен">уволен</option>
-            </select>
-          </div>
-
-          {(status === "в отпуске" || status === "уволен") && (
-            <>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <div style={{ width: "160px", fontWeight: "bold" }}>С даты:</div>
-                <input
-                  type="date"
-                  value={statusStart}
-                  onChange={(e) => setStatusStart(e.target.value)}
-                  style={{ flexGrow: 1 }}
-                />
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center" }}>
-                <div style={{ width: "160px", fontWeight: "bold" }}>По дату:</div>
-                <input
-                  type="date"
-                  value={statusEnd}
-                  onChange={(e) => setStatusEnd(e.target.value)}
-                  style={{ flexGrow: 1 }}
-                />
-              </div>
-            </>
-          )}
-        </div>
-
-        <div style={{ marginTop: "2rem", display: "flex", justifyContent: "space-between" }}>
-          <button
-            className="button red"
-            onClick={onClose}
-          >
-            Отмена
-          </button>
-
-          <div style={{ display: "flex", gap: "1rem" }}>
-            <button
-              className="button green"
-              onClick={handleUpdate}
-            >
-              Сохранить
-            </button>
-          </div>
-        </div>
+      <ErrorText text={error} />
+      <div style={{ display: "grid", gap: 12 }}>
+        <FieldRow label="ФИО:">
+          <TextInput value={name} onChange={(e) => setName(e.target.value)} />
+        </FieldRow>
+        <FieldRow label="Должность:">
+          <TextInput value={position} onChange={(e) => setPosition(e.target.value)} />
+        </FieldRow>
+        <FieldRow label="Дата начала:">
+          <TextInput type="date" max={today} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+        </FieldRow>
       </div>
-    </div>
+    </Modal>
   );
 }

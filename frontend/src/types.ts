@@ -1,50 +1,41 @@
-export interface Employee {
+export type Employee = {
   id: number;
   name: string;
-  position?: string;
-  start_date: string;
-  status: "работает" | "в отпуске" | "уволен";
-  status_start?: string | null;
-  status_end?: string | null;
-}
+  position?: string | null;
+  start_date: string;               // YYYY-MM-DD
+  status?: "работает" | "в отпуске" | "уволен" | string;
+  status_start?: string | null;     // YYYY-MM-DD | null
+  status_end?: string | null;       // YYYY-MM-DD | null
+};
 
-export interface Project {
+export type Task = {
   id: number;
   name: string;
-  description: string;
-  created_date?: string | null;
-  deadline: string;
-  completed_date?: string | null;
-  status: "в работе" | "завершен" | "просрочено";
-}
-
-export interface ProjectStage {
-  id: number;
-  project_id: number;
-  name: string;
-  order: number;
-}
-
-export interface Task {
-  id: number;
-  name: string;
-  description: string;
-  created_date: string;
-  deadline: string;
-  completed_date?: string | null;
+  description?: string;             // всегда строка (может быть пустой)
+  created_date: string;             // YYYY-MM-DD
+  deadline: string;                 // YYYY-MM-DD
+  status: string;                   // "в работе" | "выполнено" | ...
   difficulty: 1 | 2 | 4;
-  status: "в работе" | "выполнено" | "просрочено";
-  executor_ids: number[];
+  executor_ids: number[];           // нормализованный список id исполнителей
   project_id?: number | null;
   stage_id?: number | null;
-}
+};
 
-export interface ScoredEmployee {
+export type Project = {
+  id: number;
+  name: string;
+  deadline?: string | null;         // YYYY-MM-DD | null
+  status?: string | null;           // опционально (для отделов/дашбордов)
+};
+
+export type Stage = {
+  id: number;
+  name: string;
+  project_id?: number;
+};
+
+export type ScoredEmployee = {
   employee_id: number;
   name: string;
   score: number;
-}
-
-export interface DepartmentScore {
-  score: number;
-}
+};

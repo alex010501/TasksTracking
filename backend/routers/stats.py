@@ -1,20 +1,18 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from datetime import date
-from typing import List
 
-from TaskBase import DEPARTMENT_NAME
-from TaskBase.logic import get_department_score
-from TaskBase.models import Task, Project
 from dependencies import get_db
+from TaskBase import logic
+from TaskBase.schemas import DepartmentNameOut, ScoreOut
 
-router = APIRouter(prefix="/stats", tags=["Statistics"])
+router = APIRouter(prefix="/stats", tags=["stats"])
 
-@router.get("/department_name")
-def department_name():
-    return {"name": DEPARTMENT_NAME}
+@router.get("/department_name", response_model=DepartmentNameOut)
+def department_name(db: Session = Depends(get_db)):
+    name = logic.get_department_name(db)
+    return {"department_name": name or ""}
 
-@router.get("/department_score")
-def department_score(from_date: date, to_date: date, db: Session = Depends(get_db)):
-    score = get_department_score(db, from_date, to_date)
-    return {"score": score}
+@router.get("/department_score", response_model=ScoreOut)
+def department_score(from_date: str, to_date: str, db: Session = Depends(get_db)):
+    score = logic.get_department_score(db, from_date, to_date)
+    return {"score": int(score or 0)}

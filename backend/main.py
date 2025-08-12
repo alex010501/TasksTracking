@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.concurrency import run_in_threadpool
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+
 from routers import employees, projects, tasks, stats
 from TaskBase import init_db
 from TaskBase.logic import check_and_update_overdue_status
+from TaskBase.models import SessionLocal
 
 app = FastAPI(
     title="Task Tracking API"
@@ -15,14 +16,21 @@ init_db()
 
 scheduler = AsyncIOScheduler()
 
+def _overdue_job():
+    """Синхронная джоба для APScheduler: сама открывает и закрывает сессию."""
+    db = SessionLocal()
+    try:
+        check_and_update_overdue_status(db)
+    finally:
+        db.close()
+
 @app.on_event("startup")
 async def startup():
-    # 1) единоразово на запуске
-    await run_in_threadpool(check_and_update_overdue_status)
-
-    # 2) дальше — по расписанию
+    # Разовая проверка при запуске
+    _overdue_job()
+    # Ежедневно в 00:10
     scheduler.add_job(
-        check_and_update_overdue_status,
+        _overdue_job,
         CronTrigger(hour=0, minute=10),
         id="overdue_daily",
         replace_existing=True,
@@ -35,18 +43,16 @@ async def startup():
 async def shutdown():
     scheduler.shutdown(wait=False)
 
-app.include_router(employees.router, tags=["Employees"])
-app.include_router(projects.router, tags=["Projects"])
-app.include_router(tasks.router, tags=["Tasks"])
-app.include_router(stats.router, tags=["Statistics"])
+# Роутеры уже содержат prefix и tags внутри себя
+app.include_router(employees.router)
+app.include_router(projects.router)
+app.include_router(tasks.router)
+app.include_router(stats.router)
 
-origins = [
-    "http://localhost:5173"
-]
-
+# CORS только для локальной разработки
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

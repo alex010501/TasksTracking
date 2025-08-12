@@ -1,67 +1,87 @@
-from fastapi import APIRouter, Depends, HTTPException
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from datetime import date
-from typing import Optional, List
 
-from TaskBase.models import Employee, Task
-from TaskBase.logic import add_employee, get_employee_score, get_employee_tasks, get_top_employees, get_employee
 from dependencies import get_db
+from TaskBase import logic
+from TaskBase.schemas import (
+    EmployeeOut, EmployeeCreate, EmployeeUpdate,
+    ScoredEmployee, ScoreOut
+)
 
-router = APIRouter(prefix="/employees", tags=["Employees"])
+router = APIRouter(prefix="/employees", tags=["employees"])
 
-class EmployeeCreate(BaseModel):
-    name: str
-    position: str
-    date_started: date
+# --- list ---
+@router.get("/", response_model=List[EmployeeOut])
+@router.get("", response_model=List[EmployeeOut], include_in_schema=False)
+def list_employees(db: Session = Depends(get_db)):
+    rows = logic.get_all_employees(db)
+    return [EmployeeOut.model_validate(r, from_attributes=True) if hasattr(EmployeeOut, "model_validate") else EmployeeOut.from_orm(r) for r in rows]
 
-class EmployeeUpdate(BaseModel):
-    name: Optional[str] = None
-    position: Optional[str] = None
-    status: Optional[str] = None
-    status_start: Optional[date] = None
-    status_end: Optional[date] = None
-
-@router.get("/")
-def get_employees(db: Session = Depends(get_db)):
-    return db.query(Employee).order_by(Employee.name).all()
-
-@router.get("/top")
-def top_employees(from_date: date, to_date: date, n: int = 3, db: Session = Depends(get_db)):
-    top = get_top_employees(db, from_date, to_date, top_n=n)
-    return top
-
-@router.get("/search")
-def search_employees(query: str, db: Session = Depends(get_db)):
-    results = db.query(Employee).filter(Employee.name.ilike(f"%{query}%")).all()
-    return results
-
-@router.post("/")
-def create_employee(data: EmployeeCreate, db: Session = Depends(get_db)):
-    employee = add_employee(db, data.name, data.position, data.date_started)
-    return employee
-
-@router.put("/{employee_id}")
-def update_employee(employee_id: int, data: EmployeeUpdate, db: Session = Depends(get_db)):
-    emp = db.query(Employee).filter(Employee.id == employee_id).first()
-    if not emp:
+# --- get by id ---
+@router.get("/{employee_id}", response_model=EmployeeOut)
+def get_employee(employee_id: int, db: Session = Depends(get_db)):
+    row = logic.get_employee_by_id(db, employee_id)
+    if not row:
         raise HTTPException(status_code=404, detail="Employee not found")
-    for field, value in data.dict(exclude_unset=True).items():
-        setattr(emp, field, value)
-    db.commit()
-    return {"status": "updated"}
+    return EmployeeOut.model_validate(row, from_attributes=True) if hasattr(EmployeeOut, "model_validate") else EmployeeOut.from_orm(row)
 
-@router.get("/{employee_id}")
-def get_emp(employee_id: int, db: Session = Depends(get_db)):
-    emp = get_employee(db, employee_id)
-    return emp
+# --- search ---
+@router.get("/search", response_model=List[EmployeeOut])
+def search_employees(query: str = Query(..., min_length=1), db: Session = Depends(get_db)):
+    rows = logic.search_employees(db, query)
+    return [EmployeeOut.model_validate(r, from_attributes=True) if hasattr(EmployeeOut, "model_validate") else EmployeeOut.from_orm(r) for r in rows]
 
-@router.get("/{employee_id}/score")
-def employee_score(employee_id: int, from_date: date, to_date: date, db: Session = Depends(get_db)):
-    score = get_employee_score(db, employee_id, from_date, to_date)
-    return {"score": score}
+# --- create ---
+@router.post("/", response_model=EmployeeOut)
+def create_employee(payload: EmployeeCreate, db: Session = Depends(get_db)):
+    row = logic.add_employee(
+        db,
+        name=payload.name,
+        position=payload.position,
+        start_date=payload.start_date,
+        status=payload.status,
+        status_start=payload.status_start,
+        status_end=payload.status_end,
+    )
+    return EmployeeOut.model_validate(row, from_attributes=True) if hasattr(EmployeeOut, "model_validate") else EmployeeOut.from_orm(row)
 
-@router.get("/{employee_id}/tasks")
-def employee_tasks(employee_id: int, from_date: date, to_date: date, db: Session = Depends(get_db)):
-    tasks = get_employee_tasks(db, employee_id, from_date, to_date)
-    return tasks
+# --- update ---
+@router.put("/{employee_id}", response_model=EmployeeOut)
+def update_employee(employee_id: int, payload: EmployeeUpdate, db: Session = Depends(get_db)):
+    row = logic.update_employee(db, employee_id, **payload.dict(exclude_unset=True))
+    if not row:
+        raise HTTPException(status_code=404, detail="Employee not found")
+    return EmployeeOut.model_validate(row, from_attributes=True) if hasattr(EmployeeOut, "model_validate") else EmployeeOut.from_orm(row)
+
+# --- score for employee ---
+@router.get("/{employee_id}/score", response_model=ScoreOut)
+def employee_score(employee_id: int, from_date: str, to_date: str, db: Session = Depends(get_db)):
+    score = logic.get_employee_score(db, employee_id, from_date, to_date)
+    return {"score": int(score or 0)}
+
+# --- tasks for employee (period) ---
+@router.get("/{employee_id}/tasks", response_model=List[dict])  # возвращаем сырой Task JSON (фронту так удобнее)
+def employee_tasks(employee_id: int, from_date: str, to_date: str, db: Session = Depends(get_db)):
+    # Вернём как есть из логики (там уже сериализация под фронт)
+    return logic.get_employee_tasks(db, employee_id, from_date, to_date) or []
+
+# --- top employees ---
+@router.get("/top", response_model=List[ScoredEmployee])
+def top_employees(from_date: str, to_date: str, n: int = 3, db: Session = Depends(get_db)):
+    data = logic.get_top_employees(db, from_date, to_date, n) or []
+    out: List[ScoredEmployee] = []
+    for item in data:
+        if isinstance(item, dict):
+            out.append(ScoredEmployee(
+                employee_id=item.get("employee_id") or (item.get("employee") or {}).get("id") or 0,
+                name=item.get("name") or (item.get("employee") or {}).get("name") or "",
+                score=int(item.get("score") or 0),
+            ))
+        else:
+            out.append(ScoredEmployee(
+                employee_id=getattr(item, "employee_id", 0),
+                name=getattr(item, "name", ""),
+                score=int(getattr(item, "score", 0)),
+            ))
+    return out

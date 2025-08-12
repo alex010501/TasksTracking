@@ -1,134 +1,99 @@
-import { useEffect, useState } from "react";
-import type { Project } from "../types";
-import {getProjects} from "../api";
-import ProjectCard from "../components/projects/ProjectCard";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { getProjects } from "../api";
 import AddProjectModal from "../components/modals/AddProjectModal";
 import EditProjectModal from "../components/modals/EditProjectModal";
-import FilterBlock from "../components/FilterBlock";
+import ProjectCard from "../components/projects/ProjectCard";
 
-function getCurrentMonthRange() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = d.getMonth();
-  return {
-    from: new Date(y, m, 2).toISOString().split("T")[0],
-    to: new Date(y, m + 1, 1).toISOString().split("T")[0],
-  };
-}
-
-function getCurrentQuarterRange() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = d.getMonth();
-  const qStartMonth = Math.floor(m / 3) * 3;
-  return {
-    from: new Date(y, qStartMonth, 2).toISOString().split("T")[0],
-    to: new Date(y, qStartMonth + 3, 1).toISOString().split("T")[0],
-  };
-}
+type Project = { id: number; name: string; deadline?: string | null };
 
 export default function ProjectsPage() {
+  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const monthAgo = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split("T")[0];
+  }, []);
+
+  const [fromDate, setFromDate] = useState(monthAgo);
+  const [toDate, setToDate] = useState(today);
+
   const [projects, setProjects] = useState<Project[]>([]);
-  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [editProjectId, setEditProjectId] = useState<number | null>(null);
 
-  const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("все");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>();
 
-  const [fromDate, setFromDate] = useState(getCurrentMonthRange().from);
-  const [toDate, setToDate] = useState(getCurrentMonthRange().to);
-
-  const loadProjects = async () => {
-    const data = await getProjects({
-      query,
-      status: statusFilter !== "все" ? statusFilter : undefined,
-      from_date: fromDate,
-      to_date: toDate,
-    });
-    setProjects(data);
-  };
+  const loadProjects = useCallback(async () => {
+    setError(undefined);
+    setLoading(true);
+    try {
+      const list = await getProjects({ from_date: fromDate, to_date: toDate });
+      setProjects(list || []);
+    } catch (e: any) {
+      console.error(e);
+      setError(e?.message || "Не удалось загрузить проекты");
+    } finally {
+      setLoading(false);
+    }
+  }, [fromDate, toDate]);
 
   useEffect(() => {
     loadProjects();
-  }, [query, statusFilter, fromDate, toDate]);
+  }, [loadProjects]);
 
-  const handleSetCurrentMonth = () => {
-    const { from, to } = getCurrentMonthRange();
-    setFromDate(from);
-    setToDate(to);
-  };
-
-  const handleSetCurrentQuarter = () => {
-    const { from, to } = getCurrentQuarterRange();
-    setFromDate(from);
-    setToDate(to);
-  };
+  const projectToEdit = useMemo(
+    () => projects.find((p) => p.id === editProjectId) || null,
+    [projects, editProjectId]
+  );
 
   return (
-    <div style={{ padding: "2rem" }}>
-      <h2>📦 Проекты отдела</h2>
-      <div className="page-content-80-20">
-        <div className="left">
-          <FilterBlock
-            query={query}
-            onQueryChange={setQuery}
-            statusFilter={statusFilter}
-            onStatusChange={setStatusFilter}
-            fromDate={fromDate}
-            toDate={toDate}
-            onFromDateChange={setFromDate}
-            onToDateChange={setToDate}
-            onSetPeriod1={handleSetCurrentMonth}
-            onSetPeriod2={handleSetCurrentQuarter}
-            period1Label="Текущий месяц"
-            period2Label="Текущий квартал"
-          />
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            {projects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                expanded={selectedProjectId === project.id}
-                onToggle={() =>
-                  setSelectedProjectId((prev) =>
-                    prev === project.id ? null : project.id
-                  )
-                }
-                onEdit={() => setEditProjectId(project.id)}
-                onUpdated={loadProjects}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="right" style={{ position: "sticky", top: "2rem" }}>
-            <button className="button green" onClick={() => setShowAddModal(true)}>
-              + Создать проект
-            </button>
-
-            {showAddModal && (
-              <AddProjectModal
-                isOpen={showAddModal}
-                onClose={() => setShowAddModal(false)}
-                onCreated={loadProjects}
-              />
-            )}
-
-            {editProjectId !== null && (
-              <EditProjectModal
-                isOpen={true}
-                onClose={() => setEditProjectId(null)}
-                onUpdated={() => {
-                  setEditProjectId(null);
-                  loadProjects();
-                }}
-                project={projects.find((p) => p.id === editProjectId)!}
-              />
-            )}
+    <div style={{ display: "grid", gap: 12 }}>
+      <div className="filters card">
+        <div className="card-header" style={{ fontWeight: 700 }}>Фильтры</div>
+        <div className="card-body" style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <label>С: <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} /></label>
+          <label>По: <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} /></label>
+          <button className="button" onClick={loadProjects}>Применить</button>
+          <div style={{ flex: 1 }} />
+          <button className="button green" onClick={() => setShowAddModal(true)}>+ Проект</button>
         </div>
       </div>
+
+      {error && <div style={{ color: "#c0392b" }}>{error}</div>}
+      {loading && <div style={{ color: "#6b7280" }}>Загрузка…</div>}
+
+      {projects.map((project) => (
+        <ProjectCard
+          key={project.id}
+          project={project}
+          expanded={expandedId === project.id}
+          onToggle={() => setExpandedId(expandedId === project.id ? null : project.id)}
+          onEdit={() => setEditProjectId(project.id)}
+          onUpdated={loadProjects}
+          fromDate={fromDate}
+          toDate={toDate}
+        />
+      ))}
+
+      {showAddModal && (
+        <AddProjectModal
+          isOpen={true}
+          onClose={() => setShowAddModal(false)}
+          onCreated={() => { setShowAddModal(false); loadProjects(); }}
+        />
+      )}
+
+      {editProjectId !== null && projectToEdit && (
+        <EditProjectModal
+          isOpen={true}
+          onClose={() => setEditProjectId(null)}
+          onUpdated={() => { setEditProjectId(null); loadProjects(); }}
+          project={projectToEdit}
+        />
+      )}
     </div>
   );
 }

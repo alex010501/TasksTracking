@@ -1,46 +1,38 @@
 services:
   frontend:
-    image: node:20-alpine
-    working_dir: /app
-    volumes:
-      - ../frontend:/app
-    # собираем и выходим (контейнер завершится — это ок)
-    command: sh -c "npm ci && npm run build"
-    # нет портов и expose не нужен
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      network: host
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
 
   backend:
     build:
       context: ../backend
       dockerfile: Dockerfile
       network: host
-    working_dir: /app
+    environment:
+      - DEPARTMENT_NAME="Технический блок"
+      - DATABASE_URL=sqlite:////db/database.db   
+    volumes:
+      - /srv/tasks-db:/db                        
     expose:
       - "8000"
-    environment:
-      - DATABASE_URL=sqlite:///./database.db
     restart: unless-stopped
 
   tg_bot:
     build:
       context: ../tg_bot
       dockerfile: Dockerfile
-      network: host         # помогает, если во время сборки бывают таймауты до pypi
+      network: host         
     environment:
-      # Если бот в коде читает переменные окружения:
       - API_BASE=http://backend:8000
     env_file:
-      - ../.env             # BOT_TOKEN и прочие секреты лежат в корне проекта — подхватятся как env
+      - ../.env
     depends_on:
-      - backend             # если бот обращается к API бэка
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:1.27-alpine
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ../frontend/dist:/usr/share/nginx/html:ro   # <— отдаем сборку
-    depends_on:
-      - frontend
       - backend
+    restart: unless-stopped
