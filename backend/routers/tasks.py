@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 from datetime import date
 from typing import List, Optional
+from dependencies import require_delete_password
 
 from TaskBase.models import Task
 from TaskBase.logic import add_task, calculate_task_score, filter_tasks_in_period
@@ -75,3 +76,12 @@ def task_score(task_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Task not found")
     score = calculate_task_score(task)
     return {"score": score}
+
+@router.delete("/{task_id}", dependencies=[Depends(require_delete_password)])
+def delete_task(task_id: int, db: Session = Depends(get_db)):
+    task = db.query(Task).get(task_id)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    db.delete(task)
+    db.commit()
+    return {"status": "deleted", "id": task_id}

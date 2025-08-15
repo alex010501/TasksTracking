@@ -11,27 +11,35 @@ export default function AddProjectModal({ isOpen, onClose, onCreated }: Props) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [error, setError] = useState<string>("");
+  const [saving, setSaving] = useState(false);
 
   const handleCreate = async () => {
+    setError("");
     if (!name.trim()) {
       alert("Название проекта не может быть пустым.");
       return;
     }
-
     if (!deadline) {
       alert("Укажите срок проекта.");
       return;
     }
-
     const today = new Date().toISOString().split("T")[0];
     if (deadline < today) {
       alert("Срок проекта не может быть в прошлом.");
       return;
     }
 
-    await createProject({ name, description, deadline });
-    onCreated();
-    onClose();
+    try {
+      setSaving(true);
+      await createProject({ name, description, deadline });
+      onCreated();
+      onClose();
+    } catch (e: any) {
+      setError(e?.message || "Не удалось создать проект");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -47,6 +55,11 @@ export default function AddProjectModal({ isOpen, onClose, onCreated }: Props) {
         width: "500px"
       }}>
         <h2>Создание проекта</h2>
+
+        {error && (
+          <div style={{ color: "#c0392b", marginTop: "0.5rem" }}>{error}</div>
+        )}
+
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
           <div style={{ display: "flex", alignItems: "center" }}>
             <div style={{ width: "140px", fontWeight: "bold" }}>Название:</div>
@@ -71,8 +84,10 @@ export default function AddProjectModal({ isOpen, onClose, onCreated }: Props) {
         </div>
 
         <div style={{ marginTop: "2rem", display: "flex", justifyContent: "space-between" }}>
-          <button className="button red" onClick={onClose}>Отмена</button>
-          <button className="button green" onClick={handleCreate}>Создать</button>
+          <button className="button red" onClick={onClose} disabled={saving}>Отмена</button>
+          <button className="button green" onClick={handleCreate} disabled={saving}>
+            {saving ? "Создаю…" : "Создать"}
+          </button>
         </div>
       </div>
     </div>

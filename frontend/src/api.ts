@@ -173,21 +173,41 @@ export async function getProjectLinkedTasks(params: {
   return res.json();
 }
 
-export async function createTask(data: {
+export type CreateTaskDto = {
   name: string;
   description: string;
-  difficulty: 1 | 2 | 4;
-  deadline: string;
+  deadline: string;                   // YYYY-MM-DD
+  difficulty: 1 | 2 | 4;          // бэк допускает 0
   executor_ids: number[];
-  project_id?: number | null;
-  stage_id?: number | null;
-}) {
+  project_id: number;                 // бэку нужны числа, не null
+  stage_id: number;                   // бэку нужны числа, не null
+};
+
+export async function createTask(data: CreateTaskDto) {
   const res = await fetch(`${API_URL}/tasks/`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-  return res.json();
+
+  const text = await res.text();
+
+  if (!res.ok) {
+    // отдаём тело ошибки, чтобы модалка показала его пользователю
+    throw new Error(text || `HTTP ${res.status}`);
+  }
+
+  if (!text) {
+    // на случай если бэк вернул 201 без тела
+    throw new Error("Пустой ответ от сервера при создании задачи");
+  }
+
+  const ct = res.headers.get("content-type") || "";
+  if (!ct.includes("application/json")) {
+    throw new Error(`Ожидался JSON, получено (${ct}): ${text.slice(0, 200)}`);
+  }
+
+  return JSON.parse(text);
 }
 
 export async function updateTask(id: number, data: any) {
@@ -212,4 +232,27 @@ export async function completeTask(id: number, completed_date: string) {
 export async function getTaskScore(id: number) {
   const res = await fetch(`${API_URL}/tasks/${id}/score`);
   return res.json();
+}
+
+async function parseJsonOrThrow(res: Response) {
+  const text = await res.text();
+  if (!res.ok) throw new Error(text || `HTTP ${res.status}`);
+  if (!text) return { status: "deleted" };
+  try { return JSON.parse(text); } catch { return { status: "deleted" }; }
+}
+
+export async function deleteTask(id: number, password: string) {
+  const res = await fetch(`${API_URL}/tasks/${id}`, {
+    method: "DELETE",
+    headers: { "X-Delete-Password": password },
+  });
+  return parseJsonOrThrow(res);
+}
+
+export async function deleteProject(id: number, password: string) {
+  const res = await fetch(`${API_URL}/projects/${id}`, {
+    method: "DELETE",
+    headers: { "X-Delete-Password": password },
+  });
+  return parseJsonOrThrow(res);
 }

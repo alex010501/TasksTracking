@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import date
 from typing import Optional
+from dependencies import require_delete_password
 
 from TaskBase.logic import (
     add_project_with_stages,
@@ -12,7 +13,7 @@ from TaskBase.logic import (
     get_project_stages,
     get_stage_tasks,
 )
-from TaskBase.models import Project
+from TaskBase.models import Project, Task
 from dependencies import get_db
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -76,3 +77,17 @@ def api_get_project_stages(project_id: int, db: Session = Depends(get_db)):
 @router.get("/{project_id}/{stage_id}/tasks")
 def api_get_stage_tasks(project_id: int, stage_id: int, db: Session = Depends(get_db)):
     return get_stage_tasks(db, project_id, stage_id)
+
+
+@router.delete("/{project_id}", dependencies=[Depends(require_delete_password)])
+def delete_project(project_id: int, db: Session = Depends(get_db)):
+    proj = db.query(Project).get(project_id)
+    if not proj:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    # если нет каскада в БД — удалим задачи вручную
+    db.query(Task).filter(Task.project_id == project_id).delete(synchronize_session=False)
+
+    db.delete(proj)
+    db.commit()
+    return {"status": "deleted", "id": project_id}

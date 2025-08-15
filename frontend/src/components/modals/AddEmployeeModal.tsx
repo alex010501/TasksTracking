@@ -11,21 +11,25 @@ export default function AddEmployeeModal({ isOpen, onClose, onCreated }: Props) 
   const [name, setName] = useState("");
   const [position, setPosition] = useState("");
   const [startDate, setStartDate] = useState("");
+  const [error, setError] = useState<string>("");
+  const [saving, setSaving] = useState(false);
 
   const handleCreate = async () => {
+    setError("");
     if (!name.trim() || !position.trim() || !startDate) {
       alert("Пожалуйста, заполните все поля.");
       return;
     }
-
-    await addEmployee({
-      name,
-      position,
-      date_started: startDate,
-    });
-
-    onCreated();
-    onClose();
+    try {
+      setSaving(true);
+      await addEmployee({ name, position, date_started: startDate });
+      onCreated();
+      onClose();
+    } catch (e: any) {
+      setError(e?.message || "Не удалось добавить сотрудника");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -34,14 +38,9 @@ export default function AddEmployeeModal({ isOpen, onClose, onCreated }: Props) 
     <div
       style={{
         position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        top: 0, left: 0, right: 0, bottom: 0,
         backgroundColor: "rgba(0,0,0,0.5)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
+        display: "flex", justifyContent: "center", alignItems: "center",
         zIndex: 1000,
       }}
     >
@@ -54,47 +53,32 @@ export default function AddEmployeeModal({ isOpen, onClose, onCreated }: Props) 
         }}
       >
         <h2>Добавление сотрудника</h2>
+
+        {error && (
+          <div style={{ color: "#c0392b", marginTop: "0.5rem" }}>{error}</div>
+        )}
+
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
           <div style={{ display: "flex", alignItems: "center" }}>
             <div style={{ width: "140px", fontWeight: "bold" }}>ФИО:</div>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={{ flexGrow: 1 }}
-            />
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} style={{ flexGrow: 1 }} />
           </div>
 
           <div style={{ display: "flex", alignItems: "center" }}>
             <div style={{ width: "140px", fontWeight: "bold" }}>Должность:</div>
-            <input
-              type="text"
-              value={position}
-              onChange={(e) => setPosition(e.target.value)}
-              style={{ flexGrow: 1 }}
-            />
+            <input type="text" value={position} onChange={(e) => setPosition(e.target.value)} style={{ flexGrow: 1 }} />
           </div>
 
           <div style={{ display: "flex", alignItems: "center" }}>
             <div style={{ width: "140px", fontWeight: "bold" }}>Дата начала:</div>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              style={{ flexGrow: 1 }}
-            />
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={{ flexGrow: 1 }} />
           </div>
         </div>
 
         <div style={{ marginTop: "2rem", display: "flex", justifyContent: "space-between" }}>
-          <button className="button red" onClick={onClose}>
-            Отмена
-          </button>
-          <button
-            className="button green"
-            onClick={handleCreate}
-          >
-            Добавить
+          <button className="button red" onClick={onClose} disabled={saving}>Отмена</button>
+          <button className="button green" onClick={handleCreate} disabled={saving}>
+            {saving ? "Добавляю…" : "Добавить"}
           </button>
         </div>
       </div>

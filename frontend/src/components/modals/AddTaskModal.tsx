@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { getAllEmployees, createTask } from "../../api";
-import type { Employee } from "../../types";
+import { createTask } from "../../api";
+import EmployeeMultiSelect from "../EmployeeMultiSelect";
 
 type Props = {
   isOpen: boolean;
@@ -22,74 +22,58 @@ export default function AddTaskModal({
   const [deadline, setDeadline] = useState("");
   const [difficulty, setDifficulty] = useState<1 | 2 | 4>(1);
   const [executorIds, setExecutorIds] = useState<number[]>([]);
-  const [selectedExecutorId, setSelectedExecutorId] = useState<number | "">("");
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [error, setError] = useState<string>("");
+  const [saving, setSaving] = useState(false);
 
   const todayStr = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
     if (isOpen) {
-      getAllEmployees().then(setEmployees);
       setName("");
       setDescription("");
       setDeadline("");
       setDifficulty(1);
       setExecutorIds([]);
-      setSelectedExecutorId("");
+      setError("");
+      setSaving(false);
     }
   }, [isOpen]);
 
-  const addExecutor = () => {
-    if (
-      selectedExecutorId !== "" &&
-      typeof selectedExecutorId === "number" &&
-      !executorIds.includes(selectedExecutorId)
-    ) {
-      setExecutorIds((prev) => [...prev, selectedExecutorId]);
-      setSelectedExecutorId("");
-    }
-  };
-
-  const removeExecutor = (id: number) => {
-    setExecutorIds((prev) => prev.filter((eid) => eid !== id));
-  };
 
   const handleCreate = async () => {
-    if (!deadline) {
-      alert("Укажите дедлайн.");
-      return;
-    }
+    setError("");
 
-    const today = new Date(todayStr);
-    const deadlineDate = new Date(deadline);
+    if (!name.trim()) { alert("Укажите название."); return; }
+    if (!deadline) { alert("Укажите дедлайн."); return; }
+    if (new Date(deadline) < new Date(todayStr)) { alert("Дедлайн не может быть в прошлом."); return; }
+    if (!projectId || !stageId) { alert("Не найден проект/этап для задачи."); return; }
+    if (executorIds.length === 0) { alert("Выберите хотя бы одного исполнителя."); return; }
 
-    if (deadlineDate < today) {
-      alert("Дедлайн не может быть раньше сегодняшней даты.");
-      return;
-    }
+    const uniqueExecutorIds = Array.from(new Set(executorIds));
 
-    if (executorIds.length === 0) {
-      alert("Выберите хотя бы одного исполнителя.");
-      return;
-    }
-
-    const uniqueExecutorIds = Array.from(new Set(executorIds)).filter(
-      (id): id is number => typeof id === "number"
-    );
-
-    await createTask({
+    // тип строго из сигнатуры API
+    const payload: Parameters<typeof createTask>[0] = {
       name,
       description,
       deadline,
       difficulty,
       executor_ids: uniqueExecutorIds,
-      project_id: projectId ?? null,
-      stage_id: stageId ?? null,
-    });
+      project_id: Number(projectId),
+      stage_id: Number(stageId),
+    };
 
-    onCreated();
-    onClose();
+    try {
+      setSaving(true);
+      await createTask(payload);
+      onCreated();
+      onClose();
+    } catch (e: any) {
+      setError(e?.message || "Не удалось создать задачу");
+    } finally {
+      setSaving(false);
+    }
   };
+
 
   if (!isOpen) return null;
 
@@ -97,14 +81,9 @@ export default function AddTaskModal({
     <div
       style={{
         position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        top: 0, left: 0, right: 0, bottom: 0,
         backgroundColor: "rgba(0,0,0,0.5)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
+        display: "flex", justifyContent: "center", alignItems: "center",
         zIndex: 1000,
       }}
     >
@@ -125,6 +104,10 @@ export default function AddTaskModal({
           </div>
         )}
 
+        {error && (
+          <div style={{ color: "#c0392b", marginTop: "0.5rem" }}>{error}</div>
+        )}
+
         <div
           style={{
             display: "flex",
@@ -133,97 +116,19 @@ export default function AddTaskModal({
             marginTop: "1rem",
           }}
         >
-          {[["Название:", (
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={{ width: "100%" }}
-            />
-          )],
-          ["Описание:", (
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              style={{ width: "100%" }}
-              rows={3}
-            />
-          )],
-          ["Дедлайн:", (
-            <input
-              type="date"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-              min={todayStr}
-              style={{ width: "100%" }}
-            />
-          )],
-          ["Сложность:", (
-            <select
-              value={difficulty}
-              onChange={(e) =>
-                setDifficulty(Number(e.target.value) as 1 | 2 | 4)
-              }
-              style={{ width: "100%" }}
-            >
-              <option value={1}>1 – лёгкая</option>
-              <option value={2}>2 – средняя</option>
-              <option value={4}>4 – высокая</option>
-            </select>
-          )],
-          ["Исполнители:", (
-            <div>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <select
-                  value={selectedExecutorId}
-                  onChange={(e) =>
-                    setSelectedExecutorId(
-                      e.target.value === "" ? "" : Number(e.target.value)
-                    )
-                  }
-                  style={{ flexGrow: 1 }}
-                >
-                  <option value="">Выберите исполнителя</option>
-                  {employees
-                    .filter((emp) => !executorIds.includes(emp.id))
-                    .map((emp) => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.name}
-                      </option>
-                    ))}
-                </select>
-                <button onClick={addExecutor}>+</button>
-              </div>
-              <ul>
-                {executorIds.map((id) => {
-                  const emp = employees.find((e) => e.id === id);
-                  return (
-                    <li
-                      key={id}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                      }}
-                    >
-                      • {emp?.name}
-                      <button
-                        onClick={() => removeExecutor(id)}
-                        style={{
-                          background: "transparent",
-                          border: "none",
-                          color: "red",
-                          fontWeight: "bold",
-                          cursor: "pointer",
-                        }}
-                      >
-                        ×
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          )]].map(([label, field], idx) => (
+          {[
+            ["Название:", <input value={name} onChange={(e) => setName(e.target.value)} style={{ width: "100%" }} />],
+            ["Описание:", <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ width: "100%" }} rows={3} />],
+            ["Дедлайн:", <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} min={todayStr} style={{ width: "100%" }} />],
+            ["Сложность:", (
+              <select value={difficulty} onChange={(e) => setDifficulty(Number(e.target.value) as 1 | 2 | 4)} style={{ width: "100%" }}>
+                <option value={1}>1 – лёгкая</option>
+                <option value={2}>2 – средняя</option>
+                <option value={4}>4 – высокая</option>
+              </select>
+            )],
+            ["Исполнители:", <EmployeeMultiSelect value={executorIds} onChange={setExecutorIds} />],
+          ].map(([label, field], idx) => (
             <div key={idx} style={{ display: "flex", alignItems: "center" }}>
               <div style={{ width: "140px", fontWeight: "bold" }}>{label}</div>
               <div style={{ flexGrow: 1 }}>{field}</div>
@@ -238,11 +143,11 @@ export default function AddTaskModal({
             justifyContent: "space-between",
           }}
         >
-          <button onClick={onClose} className="button red">
+          <button onClick={onClose} className="button red" disabled={saving}>
             Отмена
           </button>
-          <button onClick={handleCreate} className="button green">
-            Создать
+          <button onClick={handleCreate} className="button green" disabled={saving}>
+            {saving ? "Создаю…" : "Создать"}
           </button>
         </div>
       </div>

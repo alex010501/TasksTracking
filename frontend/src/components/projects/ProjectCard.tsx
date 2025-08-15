@@ -3,7 +3,7 @@ import type { Project, ProjectStage, Task, Employee } from "../../types";
 import { getProjectStages, getProjectScore, getStageTasks, getAllEmployees } from "../../api";
 import StageCard from "./StageCard";
 import AddTaskModal from "../modals/AddTaskModal";
-import { formatDate } from "../../utils";
+import { safeDateISO } from "../../utils";
 
 type Props = {
   project: Project;
@@ -27,36 +27,69 @@ export default function ProjectCard({
   const [openStageId, setOpenStageId] = useState<number | null>(null);
   const [score, setScore] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (expanded) {
-      loadData();
-    }
-    loadScore();
-  }, [expanded]);
+  const [loadingData, setLoadingData] = useState(false);
+  const [loadingScore, setLoadingScore] = useState(false);
 
-  const loadScore = async () => {
-    // const fromS = project.created_date;
-    // const toE = project.deadline || new Date().toISOString().split("T")[0];
-    const { score } = await getProjectScore(project.id, "2000-01-01", "3000-12-31");
-    setScore(score);
+  useEffect(() => {
+    let mounted = true;
+
+    const run = async () => {
+      if (expanded) await loadData(mounted);
+      await loadScore(mounted);
     };
 
-  const loadData = async () => {
-    const stageData = await getProjectStages(project.id);
-    const taskMap: Record<number, Task[]> = {};
-    for (const stage of stageData) {
-      taskMap[stage.id] = await getStageTasks(project.id, stage.id);
-    }
-    const employeeData = await getAllEmployees();
+    run();
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expanded, project.id]);
 
-    setStages(stageData);
-    setTasksByStage(taskMap);
-    setEmployees(employeeData);
+  const loadScore = async (mounted = true) => {
+    try {
+      setLoadingScore(true);
+      const { score } = await getProjectScore(project.id, "2000-01-01", "3000-12-31");
+      if (mounted) setScore(score);
+    } catch {
+      if (mounted) setScore(null);
+    } finally {
+      if (mounted) setLoadingScore(false);
+    }
+  };
+
+  const loadData = async (mounted = true) => {
+    try {
+      setLoadingData(true);
+
+      // 1) Сначала этапы
+      const stageData = await getProjectStages(project.id);
+      if (!mounted) return;
+
+      // 2) Параллельно тянем задачи по всем этапам И список сотрудников
+      const [pairs, employeeData] = await Promise.all([
+        Promise.all(
+          stageData.map(async (s: any) => {
+            const tasks = await getStageTasks(project.id, s.id); // важно: project_id + stage_id
+            return [s.id, tasks] as const;
+          })
+        ),
+        getAllEmployees(),
+      ]);
+      if (!mounted) return;
+
+      // 3) Собираем карту задач по этапам
+      const taskMap: Record<number, Task[]> = {};
+      for (const [sid, tasks] of pairs) taskMap[sid] = tasks;
+
+      // 4) Коммитим в состояние
+      setStages(stageData);
+      setTasksByStage(taskMap);
+      setEmployees(employeeData);
+    } finally {
+      if (mounted) setLoadingData(false);
+    }
   };
 
   const refresh = async () => {
-    await loadData();
-    await loadScore();
+    await Promise.all([loadData(), loadScore()]);
   };
 
   const handleStageToggle = (stageId: number) => {
@@ -76,10 +109,10 @@ export default function ProjectCard({
         <div style={{ width: "50%", fontWeight: "bold" }}>{project.name}</div>
         <div style={{ width: "15%" }}>{project.status}</div>
         <div style={{ width: "15%" }}>
-            {project.deadline ? formatDate(project.deadline) : "—"}
+          {project.deadline ? safeDateISO(project.deadline) : "—"}
         </div>
         <div style={{ width: "15%" }}>
-            {score !== null ? `Баллы: ${score}` : "Загрузка..."}
+          {score !== null ? `Баллы: ${score}` : (loadingScore ? "Загрузка..." : "—")}
         </div>
         <button
           onClick={onToggle}
@@ -103,13 +136,13 @@ export default function ProjectCard({
           </p>
           <p>
             <strong>Сроки:</strong>{" "}
-            {formatDate(project.created_date)} —{" "}
-            {project.deadline ? formatDate(project.deadline) : "—"}
+            {safeDateISO(project.created_date)} —{" "}
+            {project.deadline ? safeDateISO(project.deadline) : "—"}
           </p>
 
           {project.status !== "завершен" && (
             <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-              <button className="button blue" onClick={onEdit}>
+              <button className="button blue" onClick={onEdit} disabled={loadingData || loadingScore}>
                 Изменить проект
               </button>
             </div>
@@ -132,8 +165,10 @@ export default function ProjectCard({
             <AddTaskModal
               isOpen={true}
               onClose={() => setShowAddModalForStage(null)}
-              onCreated={() => {
+              onCreated={async () => {
                 setShowAddModalForStage(null);
+                // Сразу обновим текущий проект (этапы/задачи/баллы), затем уведомим родителя
+                await refresh();
                 onUpdated();
               }}
               projectId={project.id}

@@ -1,12 +1,9 @@
 from datetime import datetime, date
 from sqlalchemy import create_engine, func, case, update, and_, null
 from sqlalchemy.orm import sessionmaker
-from TaskBase.models import Employee, Project, ProjectStage, Task
+from TaskBase.models import Employee, Project, ProjectStage, Task, SessionLocal
 from typing import Optional, List
 import math
-
-engine = create_engine("sqlite:///database.db", echo=False)
-SessionLocal = sessionmaker(bind=engine)
 
 # Employee functions
 def add_employee(session, name: str, position: str, start_date: date) -> Employee:
@@ -201,7 +198,7 @@ def add_task(session,
              project_id: int | None = None,
              stage_id: int | None = None) -> Task:
     
-    created_date=date.today(),
+    created_date=date.today()
 
     task = Task(
         name=name,

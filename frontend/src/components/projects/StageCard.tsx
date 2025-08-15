@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import type { ProjectStage, Task, Employee } from "../../types";
 import TaskCard from "../tasks/TaskCard";
 import EditTaskModal from "../modals/EditTaskModal";
 import { getAllEmployees } from "../../api";
-import { normalizeExecutorIds } from "../../utils";
+import { toExecutorIds } from "../../utils";
 
 type Props = {
   stage: ProjectStage;
@@ -28,33 +28,39 @@ export default function StageCard({
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
 
+  // Подтягиваем сотрудников только если их не передали пропсом
   useEffect(() => {
+    let mounted = true;
     if (propEmployees.length > 0) {
       setEmployees(propEmployees);
     } else {
-      getAllEmployees().then(setEmployees);
+      getAllEmployees()
+        .then((list) => { if (mounted) setEmployees(list); })
+        .catch(() => { /* оповещения об ошибках уже централизованы, тут без UI-изменений молча игнорируем */ });
     }
+    return () => { mounted = false; };
   }, [propEmployees]);
+
+  // Единая безопасная нормализация executor_ids
+  const fixTask = useCallback((t: Task): Task => {
+    const ids =
+      typeof t.executor_ids === "string"
+        ? toExecutorIds(t.executor_ids)
+        : t.executor_ids;
+    return { ...t, executor_ids: ids };
+  }, []);
+
+  const fixedTasks = useMemo(() => tasks.map(fixTask), [tasks, fixTask]);
 
   const handleTaskSelect = (id: number) => {
     setSelectedTaskId((prev) => (prev === id ? null : id));
   };
 
   const handleEditTask = (task: Task) => {
-    const fixedExecutorIds =
-      typeof task.executor_ids === "string"
-        ? normalizeExecutorIds(task.executor_ids)
-        : task.executor_ids;
-
-    setTaskToEdit({
-      ...task,
-      executor_ids: fixedExecutorIds,
-    });
+    setTaskToEdit(fixTask(task));
   };
 
-  const closeEditModal = () => {
-    setTaskToEdit(null);
-  };
+  const closeEditModal = () => setTaskToEdit(null);
 
   return (
     <div style={{ marginBottom: "1rem" }}>
@@ -90,28 +96,21 @@ export default function StageCard({
             + Создать задачу
           </button>
 
-          {tasks.length === 0 ? (
+          {fixedTasks.length === 0 ? (
             <p style={{ marginTop: "1rem" }}>Нет задач на этом этапе.</p>
           ) : (
             <div style={{ marginTop: "1rem" }}>
-              {tasks.map((task) => {
-                const fixedExecutorIds =
-                  typeof task.executor_ids === "string"
-                    ? normalizeExecutorIds(task.executor_ids)
-                    : task.executor_ids;
-
-                return (
-                  <TaskCard
-                    key={task.id}
-                    task={{ ...task, executor_ids: fixedExecutorIds }}
-                    employees={employees}
-                    selected={selectedTaskId === task.id}
-                    onSelect={() => handleTaskSelect(task.id)}
-                    onUpdated={onUpdated}
-                    onEdit={() => handleEditTask(task)}
-                  />
-                );
-              })}
+              {fixedTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  employees={employees}
+                  selected={selectedTaskId === task.id}
+                  onSelect={() => handleTaskSelect(task.id)}
+                  onUpdated={onUpdated}
+                  onEdit={() => handleEditTask(task)}
+                />
+              ))}
             </div>
           )}
         </div>
@@ -123,7 +122,7 @@ export default function StageCard({
           onClose={closeEditModal}
           onUpdated={() => {
             closeEditModal();
-            onUpdated(); // Обновить задачи
+            onUpdated(); // Обновить список задач у родителя
           }}
           task={taskToEdit}
         />

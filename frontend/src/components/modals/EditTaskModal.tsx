@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { getAllEmployees, updateTask } from "../../api";
-import type { Task, Employee } from "../../types";
+import { updateTask } from "../../api";
+import type { Task } from "../../types";
+import EmployeeMultiSelect from "../EmployeeMultiSelect";
+import { deleteTask } from "../../api";
+import PasswordPromptModal from "./PasswordPromptModal";
 
 type Props = {
   isOpen: boolean;
@@ -16,63 +19,60 @@ export default function EditTaskModal({ isOpen, onClose, onUpdated, task }: Prop
   const [deadline, setDeadline] = useState(task.deadline);
   const [difficulty, setDifficulty] = useState<1 | 2 | 4>(task.difficulty);
   const [executorIds, setExecutorIds] = useState<number[]>([]);
-  const [selectedExecutorId, setSelectedExecutorId] = useState<number | "">("");
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [error, setError] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+  const [askPass, setAskPass] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      getAllEmployees().then(setEmployees);
       setName(task.name);
-      setDescription((task as any).description || ""); // на случай если поле необязательное
+      setDescription((task as any).description || "");
       setCreatedDate(task.created_date);
       setDeadline(task.deadline);
       setDifficulty(task.difficulty);
-      setExecutorIds(task.executor_ids);
-      setSelectedExecutorId("");
+      setExecutorIds(Array.isArray(task.executor_ids) ? task.executor_ids : []);
+      setError("");
+      setSaving(false);
     }
   }, [isOpen, task]);
 
-  const addExecutor = () => {
-    if (selectedExecutorId !== "" && !executorIds.includes(selectedExecutorId)) {
-      setExecutorIds([...executorIds, selectedExecutorId]);
-      setSelectedExecutorId("");
-    }
-  };
-
-  const removeExecutor = (id: number) => {
-    setExecutorIds(executorIds.filter((eid) => eid !== id));
-  };
-
   const handleUpdate = async () => {
+    setError("");
+
     if (!deadline) {
       alert("Необходимо указать дедлайн.");
       return;
     }
-
     if (new Date(deadline) < new Date(createdDate)) {
       alert("Дедлайн не может быть раньше даты постановки.");
       return;
     }
-
     if (executorIds.length === 0) {
       alert("Необходимо выбрать хотя бы одного исполнителя.");
       return;
     }
 
-    const payload = {
+    const payload: Partial<Task> = {
       name,
       description,
       created_date: createdDate,
       deadline,
       difficulty,
-      executor_ids: executorIds,
+      executor_ids: Array.from(new Set(executorIds)),
       project_id: task.project_id ?? null,
       stage_id: task.stage_id ?? null,
     };
 
-    await updateTask(task.id, payload);
-    onUpdated();
-    onClose();
+    try {
+      setSaving(true);
+      await updateTask(task.id, payload);
+      onUpdated();
+      onClose();
+    } catch (e: any) {
+      setError(e?.message || "Не удалось обновить задачу");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -84,6 +84,11 @@ export default function EditTaskModal({ isOpen, onClose, onUpdated, task }: Prop
     }}>
       <div style={{ background: "white", padding: "2rem", borderRadius: "8px", width: "700px" }}>
         <h2>Редактирование задачи</h2>
+
+        {error && (
+          <div style={{ color: "#c0392b", marginTop: "0.5rem" }}>{error}</div>
+        )}
+
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem", marginTop: "1rem" }}>
           {[
             ["Название:", <input value={name} onChange={(e) => setName(e.target.value)} style={{ width: "100%" }} />],
@@ -97,39 +102,7 @@ export default function EditTaskModal({ isOpen, onClose, onUpdated, task }: Prop
                 <option value={4}>4 – высокая</option>
               </select>
             )],
-            ["Исполнители:", (
-              <div>
-                <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <select value={selectedExecutorId} onChange={(e) => setSelectedExecutorId(Number(e.target.value))} style={{ flexGrow: 1 }}>
-                    <option value="">Выберите исполнителя</option>
-                    {employees
-                      .filter((emp) => !executorIds.includes(emp.id))
-                      .map((emp) => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.name}
-                        </option>
-                      ))}
-                  </select>
-                  <button onClick={addExecutor}>+</button>
-                </div>
-                <ul style={{ margin: 0, paddingLeft: "1rem" }}>
-                  {executorIds.map((id) => {
-                    const emp = employees.find((e) => e.id === id);
-                    return (
-                      <li key={id} style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        • {emp?.name}
-                        <button
-                          onClick={() => removeExecutor(id)}
-                          className="button red"
-                        >
-                          ×
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )],
+            ["Исполнители:", <EmployeeMultiSelect value={executorIds} onChange={setExecutorIds} />],
           ].map(([label, field], idx) => (
             <div key={idx} style={{ display: "flex", alignItems: "center" }}>
               <div style={{ width: "140px", fontWeight: "bold" }}>{label}</div>
@@ -139,13 +112,25 @@ export default function EditTaskModal({ isOpen, onClose, onUpdated, task }: Prop
         </div>
 
         <div style={{ marginTop: "2rem", display: "flex", justifyContent: "space-between" }}>
-          <button onClick={onClose} className="button red">
-            Отмена
-          </button>
-          <button onClick={handleUpdate} className="button green">
-            Сохранить
+          <button onClick={onClose} className="button red" disabled={saving}>Отмена</button>
+          <button className="button yellow" onClick={() => setAskPass(true)}>Удалить задачу</button>
+          <button onClick={handleUpdate} className="button green" disabled={saving}>
+            {saving ? "Сохраняю…" : "Сохранить"}
           </button>
         </div>
+
+        <PasswordPromptModal
+          isOpen={askPass}
+          title="Удалить задачу?"
+          confirmLabel="Удалить"
+          onClose={() => setAskPass(false)}
+          onConfirm={async (pwd) => {
+            await deleteTask(task.id, pwd);
+            onUpdated();   // рефреш списка
+            onClose();     // закрыть модалку редактирования
+          }}
+        />
+
       </div>
     </div>
   );

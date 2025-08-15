@@ -1,6 +1,7 @@
-import { completeTask } from "../../api";
+import { useEffect, useState } from "react";
+import { completeTask, getTaskScore } from "../../api";
 import type { Task, Employee } from "../../types";
-import {formatDate} from "../../utils"
+import {safeDateISO} from "../../utils"
 
 type Props = {
   task: Task;
@@ -32,14 +33,33 @@ export default function TaskCard({
     }
   };
 
+  const difficulty = task.difficulty;
+
+  type TaskScoreResponse = { score: number }; // <-- тип ответа
+
+  const [score, setScore] = useState<number>(0);
+  const [loadingScore, setLoadingScore] = useState(false);
+
+  const fetchScore = async () => {
+    try {
+      setLoadingScore(true);
+      const s: TaskScoreResponse = await getTaskScore(task.id);
+      setScore(Number(s?.score) || 0); // <-- кладём только число
+    } finally {
+      setLoadingScore(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchScore();
+  }, [task.id]);
+
   const handleComplete = async () => {
     const today = new Date().toISOString().split("T")[0];
     await completeTask(task.id, today);
+    await fetchScore();   // <-- обновить баллы
     onUpdated();
   };
-
-  const difficulty = task.difficulty;
-  const score = task.status === "выполнено" ? difficulty : 0;
 
   return (
     <div style={{ marginBottom: "1rem" }}>
@@ -57,9 +77,9 @@ export default function TaskCard({
         <div style={{ width: "15%" }}>
           <span className={getStatusClass(task.status)}>{task.status}</span>
         </div>
-        <div style={{ width: "15%" }}>{formatDate(task.deadline)}</div>
+        <div style={{ width: "15%" }}>{safeDateISO(task.deadline)}</div>
         <div style={{ width: "10%" }}>
-          {score} / {difficulty}
+          {loadingScore ? "…" : score} / {difficulty}
         </div>
         <div style={{ marginLeft: "auto" }}>
           <button
@@ -92,8 +112,8 @@ export default function TaskCard({
             <strong>Описание:</strong> {task.description || "–"}
           </p>
           <p style={{ marginBottom: "0.5rem" }}>
-            <strong>С:</strong> {formatDate(task.created_date)} &nbsp; <strong>До:</strong>{" "}
-            {formatDate(task.deadline)}
+            <strong>С:</strong> {safeDateISO(task.created_date)} &nbsp; <strong>До:</strong>{" "}
+            {safeDateISO(task.deadline)}
           </p>
           <p style={{ marginBottom: "1rem" }}>
             <strong>Исполнители:</strong>{" "}
