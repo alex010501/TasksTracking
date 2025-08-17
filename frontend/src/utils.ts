@@ -22,6 +22,12 @@ export function safeDateISO(d?: string | null) {
   return Number.isNaN(dt.getTime()) ? "" : dt.toISOString().split("T")[0];
 }
 
+export function formatDate(dateStr?: string | null) {
+  if (!dateStr) return "—";
+  const [y, m, d] = dateStr.split("-");
+  return `${d}.${m}.${y}`;
+}
+
 export function toAddEmployeeDto(input: {
   name: string;
   position?: string;

@@ -21,7 +21,6 @@ export default function EmployeeTasksSection({ employeeId }: Props) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [projectNames, setProjectNames] = useState<Record<number, string>>({});
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  // const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) || null;
@@ -70,19 +69,6 @@ export default function EmployeeTasksSection({ employeeId }: Props) {
   useEffect(() => {
     getAllEmployees().then(setEmployees);
   }, []);
-
-  // const handleSelect = (taskId: number) => {
-  //   setSelectedTaskId((prev) => (prev === taskId ? null : taskId));
-  // };
-
-  // const handleEdit = (task: Task) => {
-  //   setEditingTask(task);
-  // };
-
-  // const handleTaskUpdated = () => {
-  //   setEditingTask(null);
-  //   loadTasks();
-  // };
 
   const handleCurrentMonth = () => {
     const d = new Date();
@@ -139,7 +125,7 @@ export default function EmployeeTasksSection({ employeeId }: Props) {
         const projectName = projectNames[projectId] || "Загрузка...";
         return (
           <div key={projectId} style={{ marginBottom: "1.5rem" }}>
-            <h5 style={{ margin: "0.5rem 0" }}>{projectName}</h5>
+            <h4 style={{ margin: "0.5rem 0" }}>{projectName}</h4>
             {taskList.map((task) => (
               <TaskCard
                 key={task.id}

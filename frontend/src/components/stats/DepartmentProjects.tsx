@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getProjects, getProjectScore } from "../../api";
 import type { Project } from "../../types";
-import { getScoreColor, safeDateISO } from "../../utils";
+import { getScoreColor, formatDate } from "../../utils";
 
 type Props = {
   from: string;
@@ -47,7 +47,7 @@ export default function DepartmentProjects({ from, to }: Props) {
             <div>
               <h4 style={{ margin: 0 }}>{project.name}</h4>
               <p style={{ margin: 0 }}>Статус: {project.status}</p>
-              <p style={{ margin: 0 }}>Срок: {safeDateISO(project.deadline) || "—"}</p>
+              <p style={{ margin: 0 }}>Срок: {formatDate(project.deadline) || "—"}</p>
             </div>
             <div
               style={{

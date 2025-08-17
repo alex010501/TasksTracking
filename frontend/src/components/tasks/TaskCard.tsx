@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { completeTask, getTaskScore } from "../../api";
 import type { Task, Employee } from "../../types";
-import {safeDateISO} from "../../utils"
+import {formatDate} from "../../utils"
 
 type Props = {
   task: Task;
@@ -77,7 +77,7 @@ export default function TaskCard({
         <div style={{ width: "15%" }}>
           <span className={getStatusClass(task.status)}>{task.status}</span>
         </div>
-        <div style={{ width: "15%" }}>{safeDateISO(task.deadline)}</div>
+        <div style={{ width: "15%" }}>{formatDate(task.deadline)}</div>
         <div style={{ width: "10%" }}>
           {loadingScore ? "…" : score} / {difficulty}
         </div>
@@ -112,8 +112,8 @@ export default function TaskCard({
             <strong>Описание:</strong> {task.description || "–"}
           </p>
           <p style={{ marginBottom: "0.5rem" }}>
-            <strong>С:</strong> {safeDateISO(task.created_date)} &nbsp; <strong>До:</strong>{" "}
-            {safeDateISO(task.deadline)}
+            <strong>С:</strong> {formatDate(task.created_date)} &nbsp; <strong>До:</strong>{" "}
+            {formatDate(task.deadline)}
           </p>
           <p style={{ marginBottom: "1rem" }}>
             <strong>Исполнители:</strong>{" "}

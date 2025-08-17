@@ -3,7 +3,7 @@ import type { Project, ProjectStage, Task, Employee } from "../../types";
 import { getProjectStages, getProjectScore, getStageTasks, getAllEmployees } from "../../api";
 import StageCard from "./StageCard";
 import AddTaskModal from "../modals/AddTaskModal";
-import { safeDateISO } from "../../utils";
+import { formatDate } from "../../utils";
 
 type Props = {
   project: Project;
@@ -109,7 +109,7 @@ export default function ProjectCard({
         <div style={{ width: "50%", fontWeight: "bold" }}>{project.name}</div>
         <div style={{ width: "15%" }}>{project.status}</div>
         <div style={{ width: "15%" }}>
-          {project.deadline ? safeDateISO(project.deadline) : "—"}
+          {project.deadline ? formatDate(project.deadline) : "—"}
         </div>
         <div style={{ width: "15%" }}>
           {score !== null ? `Баллы: ${score}` : (loadingScore ? "Загрузка..." : "—")}
@@ -136,8 +136,8 @@ export default function ProjectCard({
           </p>
           <p>
             <strong>Сроки:</strong>{" "}
-            {safeDateISO(project.created_date)} —{" "}
-            {project.deadline ? safeDateISO(project.deadline) : "—"}
+            {formatDate(project.created_date)} —{" "}
+            {project.deadline ? formatDate(project.deadline) : "—"}
           </p>
 
           {project.status !== "завершен" && (
