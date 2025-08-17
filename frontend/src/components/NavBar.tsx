@@ -10,25 +10,25 @@ export default function NavBar() {
       </div>
       <div className="navbar-tabs">
         <NavLink
-          to="/department"
+          to="/отдел"
           className={({ isActive }) => "tab" + (isActive ? " active" : "")}
         >
           <DepartmentHeader/>
         </NavLink>
         <NavLink
-          to="/employees"
+          to="/сотрудники"
           className={({ isActive }) => "tab" + (isActive ? " active" : "")}
         >
           Сотрудники
         </NavLink>
         <NavLink
-          to="/projects"
+          to="/проекты"
           className={({ isActive }) => "tab" + (isActive ? " active" : "")}
         >
           Проекты
         </NavLink>
         <NavLink
-          to="/tasks"
+          to="/задачи"
           className={({ isActive }) => "tab" + (isActive ? " active" : "")}
         >
           Задачи
