@@ -6,8 +6,13 @@ services:
       network: host
     ports:
       - "80:80"
+      - "443:443"                       # <— добавили HTTPS
     depends_on:
       - backend
+    volumes:
+      # Подмонтировали fullchain и key внутрь контейнера
+      - /etc/ssl/xn----dtbfcbabfwu3ac9c2ba.fullchain.pem:/etc/ssl/xn----dtbfcbabfwu3ac9c2ba.fullchain.pem:ro
+      - /etc/ssl/xn----dtbfcbabfwu3ac9c2ba.key:/etc/ssl/xn----dtbfcbabfwu3ac9c2ba.key:ro
     restart: unless-stopped
 
   backend:
@@ -18,9 +23,9 @@ services:
     environment:
       - ADMIN_DELETE_PASSWORD=WH40k
       - DEPARTMENT_NAME=Технический блок
-      - DATABASE_URL=sqlite:////db/database.db   
+      - DATABASE_URL=sqlite:////db/database.db
     volumes:
-      - ./database.db:/db/database.db                       
+      - ./database.db:/db/database.db
     expose:
       - "8000"
     restart: unless-stopped
