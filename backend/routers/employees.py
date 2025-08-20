@@ -18,6 +18,7 @@ class EmployeeCreate(BaseModel):
 class EmployeeUpdate(BaseModel):
     name: Optional[str] = None
     position: Optional[str] = None
+    start_date: Optional[date] = None
     status: Optional[str] = None
     status_start: Optional[date] = None
     status_end: Optional[date] = None

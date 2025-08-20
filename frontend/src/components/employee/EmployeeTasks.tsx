@@ -125,7 +125,7 @@ export default function EmployeeTasksSection({ employeeId }: Props) {
         const projectName = projectNames[projectId] || "Загрузка...";
         return (
           <div key={projectId} style={{ marginBottom: "1.5rem" }}>
-            <h4 style={{ margin: "0.5rem 0" }}>{projectName}</h4>
+            <h3 style={{ margin: "0.5rem 0" }}>{projectName}</h3>
             {taskList.map((task) => (
               <TaskCard
                 key={task.id}
@@ -148,7 +148,7 @@ export default function EmployeeTasksSection({ employeeId }: Props) {
 
       {tasksWithoutProject.length > 0 && (
         <div style={{ marginTop: "2rem" }}>
-          <h4>Прочие задачи</h4>
+          <h3>Прочие задачи</h3>
           {tasksWithoutProject.map((task) => (
             <TaskCard
                 key={task.id}

@@ -179,8 +179,8 @@ export type CreateTaskDto = {
   deadline: string;                   // YYYY-MM-DD
   difficulty: 1 | 2 | 4;          // бэк допускает 0
   executor_ids: number[];
-  project_id: number;                 // бэку нужны числа, не null
-  stage_id: number;                   // бэку нужны числа, не null
+  project_id?: number | null;
+  stage_id?: number | null;
 };
 
 export async function createTask(data: CreateTaskDto) {

@@ -6,8 +6,12 @@ export default function NavBar() {
   return (
     <nav className="navbar">
       <div className="navbar-left">
-        <img src="/logo.svg" alt="Логотип" className="logo" />
+        {/* Лого → на главную */}
+        <NavLink to="/" aria-label="На главную" className="logo-link">
+          <img src="/logo.svg" alt="Логотип" className="logo" />
+        </NavLink>
       </div>
+
       <div className="navbar-tabs">
         <NavLink
           to="/отдел"

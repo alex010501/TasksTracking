@@ -39,27 +39,25 @@ export default function AddTaskModal({
     }
   }, [isOpen]);
 
-
   const handleCreate = async () => {
     setError("");
 
     if (!name.trim()) { alert("Укажите название."); return; }
     if (!deadline) { alert("Укажите дедлайн."); return; }
     if (new Date(deadline) < new Date(todayStr)) { alert("Дедлайн не может быть в прошлом."); return; }
-    if (!projectId || !stageId) { alert("Не найден проект/этап для задачи."); return; }
     if (executorIds.length === 0) { alert("Выберите хотя бы одного исполнителя."); return; }
 
     const uniqueExecutorIds = Array.from(new Set(executorIds));
 
-    // тип строго из сигнатуры API
+    // Тип берем из сигнатуры API. project_id/stage_id передаем как null, если их нет.
     const payload: Parameters<typeof createTask>[0] = {
       name,
       description,
       deadline,
       difficulty,
       executor_ids: uniqueExecutorIds,
-      project_id: Number(projectId),
-      stage_id: Number(stageId),
+      project_id: projectId ?? null,
+      stage_id: stageId ?? null,
     };
 
     try {
@@ -73,7 +71,6 @@ export default function AddTaskModal({
       setSaving(false);
     }
   };
-
 
   if (!isOpen) return null;
 
@@ -97,10 +94,14 @@ export default function AddTaskModal({
       >
         <h2>Создание задачи</h2>
 
-        {(projectId || stageId) && (
+        {(projectId || stageId) ? (
           <div style={{ marginBottom: "1rem", fontStyle: "italic", color: "#555" }}>
             {projectId && <div>Проект ID: {projectId}</div>}
             {stageId && <div>Этап ID: {stageId}</div>}
+          </div>
+        ) : (
+          <div style={{ marginBottom: "1rem", fontStyle: "italic", color: "#555" }}>
+            Создаётся отдельная задача (вне проекта)
           </div>
         )}
 
